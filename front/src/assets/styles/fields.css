@@ -1,0 +1,16 @@
+
+/* Стили для полей ввода */
+.input-field {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #dcdcdc;
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+
+.input-field:focus {
+    border-color: #3498db; /* Цвет рамки при фокусе */
+    outline: none;
+}

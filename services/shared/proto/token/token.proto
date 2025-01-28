@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+import "google/protobuf/timestamp.proto";
+
+// protoc \
+//     --proto_path=./shared/proto \
+//     --go_out=paths=source_relative:./token/internal/grpc/pb \
+//     --go-grpc_out=paths=source_relative:./token/internal/grpc/pb \
+//     ./shared/proto/token.proto
+
+
+package tokenpb;
+
+option go_package = "github.com/myacey/jxgercorp-banking/shared/proto/tokenpb";
+
+service TokenService {
+    rpc GenerateToken(GenerateTokenRequest) returns (GenerateTokenResponse);
+    rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
+
+message GenerateTokenRequest {
+    string username = 1;
+    google.protobuf.Timestamp ttl = 2;
+}
+
+message GenerateTokenResponse {
+    string token = 1;
+}
+
+message ValidateTokenRequest {
+    string username = 1;
+    string token = 2;
+}
+
+message ValidateTokenResponse {
+    bool valid = 1;
+}
