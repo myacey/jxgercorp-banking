@@ -3,12 +3,12 @@ package main
 import (
 	"net"
 
-	"github.com/myacey/jxgercorp-banking/shared/backconfig"
-	"github.com/myacey/jxgercorp-banking/shared/logging"
-	tokenpb "github.com/myacey/jxgercorp-banking/shared/proto/token"
-	"github.com/myacey/jxgercorp-banking/token/internal/repository/redisrepo"
-	"github.com/myacey/jxgercorp-banking/token/internal/service"
-	"github.com/myacey/jxgercorp-banking/token/internal/tokenmaker"
+	"github.com/myacey/jxgercorp-banking/services/shared/backconfig"
+	"github.com/myacey/jxgercorp-banking/services/shared/logging"
+	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
+	"github.com/myacey/jxgercorp-banking/services/token/internal/repository/redisrepo"
+	"github.com/myacey/jxgercorp-banking/services/token/internal/service"
+	"github.com/myacey/jxgercorp-banking/services/token/internal/tokenmaker"
 	"google.golang.org/grpc"
 )
 
@@ -39,8 +39,8 @@ func main() {
 		panic(err)
 	}
 
-	server := grpc.NewServer()
 	tokenService := service.NewTokenService(tokenRepo, tokenMaker, lg)
+	server := grpc.NewServer(grpc.UnaryInterceptor(tokenService.LoggingInterceptor))
 	tokenpb.RegisterTokenServiceServer(server, tokenService)
 
 	lg.Info("start gRPC service")

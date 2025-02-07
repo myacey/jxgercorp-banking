@@ -2,11 +2,12 @@ package tokenmaker
 
 import (
 	"errors"
+	"log"
 	"strconv"
 	"time"
 
 	"github.com/aead/chacha20poly1305"
-	"github.com/myacey/jxgercorp-banking/token/internal/models"
+	"github.com/myacey/jxgercorp-banking/services/token/internal/models"
 	"github.com/o1egl/paseto"
 )
 
@@ -33,25 +34,30 @@ func NewPaseto(symmetricKey string) (*PasetoMaker, error) {
 	return maker, nil
 }
 
-func (m *PasetoMaker) CreateToken(username string, ttl time.Duration) (string, error) {
-	payload, err := models.NewPayload(username, ttl)
+func (m *PasetoMaker) CreateToken(username string, expireTime time.Time) (string, error) {
+	payload, err := models.NewPayload(username, expireTime)
 	if err != nil {
 		return "", err
 	}
 
-	return m.paseto.Encrypt(m.symmetricKey, payload, nil)
+	footer := username // public username
+
+	return m.paseto.Encrypt(m.symmetricKey, payload, footer)
 }
 
-func (m *PasetoMaker) VerifyToken(token string) (*models.Payload, error) {
+// VerifyToken extracts token's payload and footer(public username):
+func (m *PasetoMaker) VerifyToken(token string) (*models.Payload, string, error) {
 	payload := &models.Payload{}
+	var footer string // username
 
-	if err := m.paseto.Decrypt(token, m.symmetricKey, &payload, nil); err != nil {
-		return nil, ErrKeyNotValid
+	if err := m.paseto.Decrypt(token, m.symmetricKey, &payload, &footer); err != nil {
+		log.Print(err)
+		return nil, "", ErrKeyNotValid
 	}
 
 	if err := payload.Valid(); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return payload, nil
+	return payload, footer, nil
 }

@@ -68,6 +68,7 @@ export default {
                 // clear form
                 this.username = '';
                 this.password = '';
+                this.$router.push('/main'); // автоматический переход на /main
             } catch(err) {
                 console.log('Login failed:', err);
                 this.error = err.data?.error?.message || 'Login failed. Please try again';

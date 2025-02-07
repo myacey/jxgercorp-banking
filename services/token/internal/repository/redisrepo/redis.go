@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/myacey/jxgercorp-banking/shared/backconfig"
+	"github.com/myacey/jxgercorp-banking/services/shared/backconfig"
 	"github.com/redis/go-redis/v9"
 )
 

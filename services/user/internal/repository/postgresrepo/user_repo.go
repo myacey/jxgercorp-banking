@@ -6,10 +6,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	db "github.com/myacey/jxgercorp-banking/db/sqlc"
-	"github.com/myacey/jxgercorp-banking/shared/cstmerr"
-	"github.com/myacey/jxgercorp-banking/user/internal/models"
-	"github.com/myacey/jxgercorp-banking/user/internal/repository"
+	db "github.com/myacey/jxgercorp-banking/services/db/sqlc"
+	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/repository"
 	"go.uber.org/zap"
 )
 
@@ -25,10 +24,11 @@ func NewUserRepo(queries *db.Queries, logger *zap.SugaredLogger) repository.User
 	}
 }
 
-func (r *PostgresUserRepository) CreateUser(c *gin.Context, newUser *models.UserUnhashed) (*db.User, error) {
+func (r *PostgresUserRepository) CreateUser(c *gin.Context, username, email, hashedPassword string) (*db.User, error) {
 	arg := db.CreateUserParams{
-		Username: newUser.Username,
-		Email:    newUser.Email,
+		Username:       username,
+		Email:          email,
+		HashedPassword: hashedPassword,
 	}
 	dbUser, err := r.store.CreateUser(c, arg)
 	if err != nil {
@@ -60,7 +60,7 @@ func (r *PostgresUserRepository) GetUserByUsername(c *gin.Context, username stri
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
-			return nil, nil
+			return nil, cstmerr.New(http.StatusBadRequest, "no user found", nil)
 		default:
 			return nil, cstmerr.New(http.StatusInternalServerError, cstmerr.ErrUnknown.Error(), err)
 		}
@@ -82,11 +82,12 @@ func (r *PostgresUserRepository) DeleteUserByUsername(c *gin.Context, username s
 	return nil
 }
 
-func (r *PostgresUserRepository) UpdateUserInfo(c *gin.Context, username string, newEmail string, newHashedPassword string) (*db.User, error) {
+func (r *PostgresUserRepository) UpdateUserInfo(c *gin.Context, username string, newEmail string, newHashedPassword string, pendingStatus bool) (*db.User, error) {
 	arg := db.UpdateUserInfoParams{
 		Username:       username,
 		HashedPassword: sql.NullString{String: newHashedPassword, Valid: newHashedPassword != ""},
 		Email:          sql.NullString{String: newEmail, Valid: newEmail != ""},
+		Pending:        sql.NullBool{Bool: pendingStatus, Valid: pendingStatus != true}, // pending can only move from true->false
 	}
 	dbUser, err := r.store.UpdateUserInfo(c, arg)
 	if err != nil {

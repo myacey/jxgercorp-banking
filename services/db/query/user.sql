@@ -19,7 +19,8 @@ WHERE id = $1 LIMIT 1;
 UPDATE users
 SET
     hashed_password=COALESCE(sqlc.narg(hashed_password), hashed_password),
-    email=COALESCE(sqlc.narg(email), email)
+    email=COALESCE(sqlc.narg(email), email),
+    pending=COALESCE(sqlc.narg(pending), pending)
 WHERE
     username=$1
 RETURNING *;
@@ -27,3 +28,10 @@ RETURNING *;
 -- name: DeleteUserByUsername :exec
 DELETE FROM users
 WHERE username = $1;
+
+-- name: ChangeUserBalance :one
+UPDATE users
+SET
+    balance = balance + @add_balance::BIGINT
+WHERE username = $1
+RETURNING *;

@@ -3,11 +3,12 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
-	tokenpb "github.com/myacey/jxgercorp-banking/shared/proto/token"
-	"github.com/myacey/jxgercorp-banking/token/internal/repository"
-	"github.com/myacey/jxgercorp-banking/token/internal/tokenmaker"
+	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
+	"github.com/myacey/jxgercorp-banking/services/token/internal/repository"
+	"github.com/myacey/jxgercorp-banking/services/token/internal/tokenmaker"
 	"go.uber.org/zap"
 )
 
@@ -33,7 +34,7 @@ func NewTokenService(r repository.TokenRepository, tokenMaker *tokenmaker.Paseto
 }
 
 func (t *TokenService) GenerateToken(ctx context.Context, req *tokenpb.GenerateTokenRequest) (*tokenpb.GenerateTokenResponse, error) {
-	newToken, err := t.TokenMaker.CreateToken(req.Username, time.Since(req.Ttl.AsTime()))
+	newToken, err := t.TokenMaker.CreateToken(req.Username, req.Ttl.AsTime())
 	if err != nil {
 		return &tokenpb.GenerateTokenResponse{Token: ""}, err
 	}
@@ -49,16 +50,25 @@ func (t *TokenService) GenerateToken(ctx context.Context, req *tokenpb.GenerateT
 }
 
 func (t *TokenService) ValidateToken(ctx context.Context, req *tokenpb.ValidateTokenRequest) (*tokenpb.ValidateTokenResponse, error) {
-	_, dbToken, err := t.TokenRepo.GetToken(ctx, req.Username)
+	payload, username, err := t.TokenMaker.VerifyToken(req.Token)
+	if err != nil {
+		t.lg.Error(err)
+		return nil, err
+	}
+
+	dbToken, err := t.TokenRepo.GetToken(ctx, username)
+	t.lg.Infow("validate token in progress", "db token", dbToken, "providen payload", payload, "username", username)
 	if err != nil {
 		return &tokenpb.ValidateTokenResponse{Valid: false}, err
 	}
 
-	if _, err := t.TokenMaker.VerifyToken(dbToken); err != nil || dbToken != req.Token {
+	if _, dbUsername, err := t.TokenMaker.VerifyToken(dbToken); err != nil || dbToken != req.Token || username != dbUsername {
+		log.Println("AAAAAAAAA", dbUsername)
 		return &tokenpb.ValidateTokenResponse{Valid: false}, fmt.Errorf("invalid")
 	}
 
 	return &tokenpb.ValidateTokenResponse{
-		Valid: true,
+		Valid:    true,
+		Username: username,
 	}, nil
 }

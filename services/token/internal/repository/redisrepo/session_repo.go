@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
-	"github.com/myacey/jxgercorp-banking/shared/cstmerr"
-	"github.com/myacey/jxgercorp-banking/token/internal/models"
-	"github.com/myacey/jxgercorp-banking/token/internal/repository"
+	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
+	"github.com/myacey/jxgercorp-banking/services/token/internal/models"
+	"github.com/myacey/jxgercorp-banking/services/token/internal/repository"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
@@ -32,23 +33,22 @@ func (r *RedisTokenRepo) CreateToken(c context.Context, payload string, username
 	return r.store.Set(c, username, marshalled, ttl).Err()
 }
 
-func (r *RedisTokenRepo) GetToken(c context.Context, username string) (*models.Payload, string, error) {
-	var payload *models.Payload
-	marhalledPayload, err := r.store.Get(c, username).Result()
+func (r *RedisTokenRepo) GetToken(c context.Context, username string) (string, error) {
+	token, err := r.store.Get(c, username).Result()
+
+	token = strings.TrimLeft(token, "\\\"")
+	token = strings.TrimRight(token, "\\\"")
+
 	if err != nil {
 		switch {
 		case errors.Is(err, redis.Nil):
-			return nil, "", nil // key just dont exists
+			return "", nil // key just dont exists
 		default:
-			return nil, "", err // another error
+			return "", err // another error
 		}
 	}
 
-	if err := json.Unmarshal([]byte(marhalledPayload), &payload); err != nil {
-		return nil, "", cstmerr.New(http.StatusInternalServerError, cstmerr.ErrUnknown.Error(), err)
-	}
-
-	return payload, marhalledPayload, nil
+	return token, nil
 }
 
 func (r *RedisTokenRepo) UpdateToken(c context.Context, newPayload *models.Payload, username string, ttl time.Duration) error {

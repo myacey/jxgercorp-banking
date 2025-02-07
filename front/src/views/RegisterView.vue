@@ -86,6 +86,8 @@ export default {
                 this.username = '';
                 this.password = '';
                 this.confirmPassword = '';
+
+                this.$router.push('/login'); // автоматический переход на /login
             } catch(err) {
                 console.log('Registration failed:', err);
                 this.error = err.data?.error?.message || 'Registration failed. Please try again';

@@ -9,12 +9,14 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/myacey/jxgercorp-banking/shared/backconfig"
-	"github.com/myacey/jxgercorp-banking/shared/logging"
-	tokenpb "github.com/myacey/jxgercorp-banking/shared/proto/token"
-	"github.com/myacey/jxgercorp-banking/user/internal/controller"
-	"github.com/myacey/jxgercorp-banking/user/internal/repository/postgresrepo"
-	"github.com/myacey/jxgercorp-banking/user/internal/service"
+	"github.com/myacey/jxgercorp-banking/services/shared/backconfig"
+	"github.com/myacey/jxgercorp-banking/services/shared/logging"
+	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/confirmation"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/controller"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/repository/postgresrepo"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/repository/redisrepo"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/service"
 )
 
 func main() {
@@ -39,17 +41,29 @@ func main() {
 	defer conn.Close()
 	logger.Debug("postgres conn initialized")
 
+	// user repository
 	userRepo := postgresrepo.NewUserRepo(psqlQueries, logger)
 
+	// grpc conn with token service
 	grpcConn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		logger.Fatal(err)
 	}
 	defer grpcConn.Close()
 	tokenServiceRPC := tokenpb.NewTokenServiceClient(grpcConn)
-	srv := service.NewService(userRepo, tokenServiceRPC, logger)
 
-	ctrller := controller.NewController(srv, logger)
+	// CONFIRMATION
+	// repo
+	rdb, err := redisrepo.ConfigureRedisClient(&config)
+	if err != nil {
+		panic(err)
+	}
+	confirmRepo := redisrepo.NewConfirmationCodesRepo(rdb, logger)
+	cnfrmService := confirmation.NewConfirmationService(confirmRepo, "notif.email.register.confirm", 0)
+
+	srv := service.NewService(userRepo, tokenServiceRPC, logger, cnfrmService)
+
+	ctrller := controller.NewController(srv, tokenServiceRPC, logger)
 
 	r := gin.Default()
 
@@ -63,6 +77,9 @@ func main() {
 	}))
 	r.POST("/api/v1/user/register", ctrller.CreateUser)
 	r.POST("/api/v1/user/login", ctrller.Login)
+	r.POST("/api/v1/user/confirm", ctrller.ConfirmUserEmail)
+
+	r.GET("/api/v1/user/balance", ctrller.GetUserBalance)
 
 	logger.Info("User microservice running on :8081")
 	r.Run("localhost:8081")

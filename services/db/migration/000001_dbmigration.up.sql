@@ -3,7 +3,7 @@ CREATE TABLE "users" (
     "username" varchar UNIQUE NOT NULL,
     "email" varchar UNIQUE NOT NULL,
     "hashed_password" varchar NOT NULL,
-    "balance" bigserial NOT NULL,
+    "balance" bigint NOT NULL DEFAULT 1000,
     "created_at" timestamptz NOT NULL DEFAULT (now())
 );
 

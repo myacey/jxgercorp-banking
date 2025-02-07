@@ -1,13 +1,12 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/myacey/jxgercorp-banking/shared/cstmerr"
-	"github.com/myacey/jxgercorp-banking/shared/ctxkeys"
-	"github.com/myacey/jxgercorp-banking/user/internal/models"
+	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
+	"github.com/myacey/jxgercorp-banking/services/shared/ctxkeys"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/models"
 )
 
 const secondsPerDay = 86400
@@ -42,10 +41,11 @@ func (h *Controller) CreateUser(c *gin.Context) {
 }
 
 type LoginReq struct {
-	Username string `json:"username" bindding:"required"`
-	Password string `json:"password" bingding:"required"`
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
+// Login checks user data with existing in db and sends auth token
 func (h *Controller) Login(c *gin.Context) {
 	var req LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -59,12 +59,57 @@ func (h *Controller) Login(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie("authToken", token, secondsPerDay, "/", "localhost", false, true)
+	c.SetCookie("authToken", token, secondsPerDay, "/", "localhost", false, false)
 	c.JSON(http.StatusOK, gin.H{"message": "success"})
 }
 
+// GetUserBalance checks user token and return user's balance
+func (h *Controller) GetUserBalance(c *gin.Context) {
+	username := c.GetHeader("X-User-Username")
+	if username == "" {
+		h.JSONError(c, cstmerr.ErrInvalidToken)
+		return
+	}
+
+	usr, err := h.srv.GetUserByUsername(c, username)
+	if err != nil {
+		h.JSONError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"balance": usr.Balance})
+}
+
+type ConfirmUserEmailReq struct {
+	Username string `json:"username"`
+	Code     string `json:"code"`
+}
+
+func (h *Controller) ConfirmUserEmail(c *gin.Context) {
+	var req ConfirmUserEmailReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		h.lg.Debug(err)
+		h.JSONError(c, err)
+		return
+	}
+
+	h.lg.Debugw("got confirm code req",
+		"username", req.Username,
+		"code", req.Code,
+	)
+
+	msg, err := h.srv.ConfirmUserEmail(c, req.Username, req.Code)
+	if err != nil {
+		h.lg.Debug(err)
+		h.JSONError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": msg})
+}
+
 type GetUserByIDReq struct {
-	ID int64 `json:"id", binding="required,number"`
+	ID int64 `json:"id", binding:"required,number"`
 }
 
 func (h *Controller) GetUserByID(c *gin.Context) {
@@ -128,6 +173,7 @@ type UpdateUserInfoReq struct {
 	NewPassword string `json:"password"`
 }
 
+// TODO: change
 func (h *Controller) UpdateUserInfo(c *gin.Context) {
 	var req UpdateUserInfoReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -137,7 +183,7 @@ func (h *Controller) UpdateUserInfo(c *gin.Context) {
 
 	usrnameCtx, exists := c.Get(string(ctxkeys.UsernameKey))
 	if !exists {
-		h.JSONError(c, fmt.Errorf("unauthorized"), http.StatusUnauthorized)
+		h.JSONError(c, cstmerr.ErrInvalidToken)
 		return
 	}
 	username, ok := usrnameCtx.(string)

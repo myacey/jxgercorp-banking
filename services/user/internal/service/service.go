@@ -3,15 +3,20 @@ package service
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
+	"github.com/myacey/jxgercorp-banking/services/shared/converters"
+	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
+	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
+	"github.com/myacey/jxgercorp-banking/services/shared/sharedmodels"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/confirmation"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/models"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/repository"
+
 	"github.com/gin-gonic/gin"
-	"github.com/myacey/jxgercorp-banking/shared/converters"
-	tokenpb "github.com/myacey/jxgercorp-banking/shared/proto/token"
-	"github.com/myacey/jxgercorp-banking/shared/sharedmodels"
-	"github.com/myacey/jxgercorp-banking/user/internal/models"
-	"github.com/myacey/jxgercorp-banking/user/internal/repository"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -23,6 +28,8 @@ type ServiceInterface interface {
 	CreateUser(c *gin.Context, newUser *models.UserUnhashed) (*sharedmodels.User, error)
 	Login(c *gin.Context, username, password string) (string, error)
 
+	ConfirmUserEmail(c *gin.Context, username, code string) (string, error)
+
 	GetUserByID(c *gin.Context, id int64) (*sharedmodels.User, error)
 	GetUserByUsername(c *gin.Context, username string) (*sharedmodels.User, error)
 	DeleteUserByUsername(c *gin.Context, username string) error
@@ -33,23 +40,45 @@ type Service struct {
 	userRepo        repository.UserRepository
 	tokenServiceRPC tokenpb.TokenServiceClient
 	lg              *zap.SugaredLogger
+
+	registerConfirmSrv confirmation.ConfirmationServiceInterface
 }
 
-func NewService(ur repository.UserRepository, tk tokenpb.TokenServiceClient, lg *zap.SugaredLogger) ServiceInterface {
+func NewService(ur repository.UserRepository, tk tokenpb.TokenServiceClient, lg *zap.SugaredLogger, registerConfirmSrv confirmation.ConfirmationServiceInterface) ServiceInterface {
 	return &Service{
-		userRepo:        ur,
-		tokenServiceRPC: tk,
-		lg:              lg,
+		userRepo:           ur,
+		tokenServiceRPC:    tk,
+		lg:                 lg,
+		registerConfirmSrv: registerConfirmSrv,
 	}
 }
 
 func (s *Service) CreateUser(c *gin.Context, newUser *models.UserUnhashed) (*sharedmodels.User, error) {
-	dbUser, err := s.userRepo.CreateUser(c, newUser)
+	unhashedPassword := newUser.Password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(unhashedPassword), bcrypt.DefaultCost)
+	if err != nil {
+		switch {
+		case errors.Is(err, bcrypt.ErrHashTooShort):
+			return nil, cstmerr.New(http.StatusBadRequest, "password too short", nil)
+		case errors.Is(err, bcrypt.ErrPasswordTooLong):
+			return nil, cstmerr.New(http.StatusBadRequest, "password too long", nil)
+		default:
+			return nil, cstmerr.ErrUnknown
+		}
+	}
+
+	dbUser, err := s.userRepo.CreateUser(c, newUser.Username, newUser.Email, string(hashedPassword))
 	if err != nil {
 		return nil, fmt.Errorf("cant create new user: %v", err)
 	}
 
 	user := converters.ConvertDBUserToModel(dbUser)
+
+	err = s.registerConfirmSrv.GenerateAccountConfirmation(c, newUser.Username, newUser.Email)
+	if err != nil {
+		return nil, err
+	}
+
 	return user, nil
 }
 
@@ -59,8 +88,17 @@ func (s *Service) Login(c *gin.Context, username, password string) (string, erro
 		return "", err
 	}
 
-	if password != usr.HashedPassword { // TODO: change
-		return "", ErrInvalidEmailOrPassword
+	if usr.Pending {
+		return "", cstmerr.New(http.StatusUnauthorized, "check email for account comfirmation", nil)
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(usr.HashedPassword), []byte(password)); err != nil { // TODO: change
+		switch {
+		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
+			return "", ErrInvalidEmailOrPassword
+		default:
+			return "", cstmerr.ErrUnknown
+		}
 	}
 
 	genTokenReq := &tokenpb.GenerateTokenRequest{
@@ -68,8 +106,25 @@ func (s *Service) Login(c *gin.Context, username, password string) (string, erro
 		Ttl:      timestamppb.New(time.Now().Add(tokenTTL)),
 	}
 	resp, err := s.tokenServiceRPC.GenerateToken(c.Request.Context(), genTokenReq)
+	if err != nil || resp.Token == "" {
+		return "", cstmerr.New(http.StatusUnauthorized, cstmerr.ErrUnknown.Error(), err)
+	}
 
-	return resp.Token, err
+	return resp.Token, nil
+}
+
+func (s *Service) ConfirmUserEmail(c *gin.Context, username, code string) (string, error) {
+	err := s.registerConfirmSrv.CheckConfirmCode(c, username, code)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = s.userRepo.UpdateUserInfo(c, username, "", "", false)
+	if err != nil {
+		return "", err
+	}
+
+	return "success", nil
 }
 
 func (s *Service) GetUserByID(c *gin.Context, id int64) (*sharedmodels.User, error) {
@@ -101,7 +156,7 @@ func (s *Service) DeleteUserByUsername(c *gin.Context, username string) error {
 }
 
 func (s *Service) UpdateUserInfo(c *gin.Context, username string, newEmail string, newPassword string) (*sharedmodels.User, error) {
-	dbUser, err := s.userRepo.UpdateUserInfo(c, username, newEmail, newPassword) // TODO: hash
+	dbUser, err := s.userRepo.UpdateUserInfo(c, username, newEmail, newPassword, false) // TODO: hash
 	if err != nil {
 		return nil, fmt.Errorf("cant update user info: %v", err)
 	}

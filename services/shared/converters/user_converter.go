@@ -1,8 +1,8 @@
 package converters
 
 import (
-	db "github.com/myacey/jxgercorp-banking/db/sqlc"
-	"github.com/myacey/jxgercorp-banking/shared/sharedmodels"
+	db "github.com/myacey/jxgercorp-banking/services/db/sqlc"
+	"github.com/myacey/jxgercorp-banking/services/shared/sharedmodels"
 )
 
 func ConvertDBUserToModel(dbUser *db.User) *sharedmodels.User {

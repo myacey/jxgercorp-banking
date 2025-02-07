@@ -11,7 +11,7 @@ import "google/protobuf/timestamp.proto";
 
 package tokenpb;
 
-option go_package = "github.com/myacey/jxgercorp-banking/shared/proto/tokenpb";
+option go_package = "github.com/myacey/jxgercorp-banking/services/shared/proto/tokenpb";
 
 service TokenService {
     rpc GenerateToken(GenerateTokenRequest) returns (GenerateTokenResponse);
@@ -28,10 +28,11 @@ message GenerateTokenResponse {
 }
 
 message ValidateTokenRequest {
-    string username = 1;
-    string token = 2;
+    // string username = 1;
+    string token = 1;
 }
 
 message ValidateTokenResponse {
-    bool valid = 1;
+    string username = 1;
+    bool valid = 2;
 }

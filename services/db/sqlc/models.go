@@ -23,4 +23,5 @@ type User struct {
 	HashedPassword string    `json:"hashed_password"`
 	Balance        int64     `json:"balance"`
 	CreatedAt      time.Time `json:"created_at"`
+	Pending        bool      `json:"pending"`
 }
