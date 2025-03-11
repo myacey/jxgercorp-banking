@@ -49,12 +49,18 @@ func (h *Controller) ListenEmailRegisterConfirm() error {
 	r.SetOffsetAt(context.Background(), time.Now()) // start listen from now
 
 	msgFormat := `
+	<!DOCTYPE html>
 	<html>
-		<body style=\"font-family: Arial, sans-serif;\">
-			<p>Visit the following link to confirm your account:</p>
-			<a href=\"%s\" style=\"color: #7b3f98; font-weight: bold;\">%s</a>
-			<p>If you did not request this, please ignore this email.</p>
-		</body>
+	<head>
+		<meta charset="UTF-8">
+	</head>
+	<body style="font-family: Arial, sans-serif;">
+		<p>Visit the following link to confirm your account:</p>
+		<a href="%s" style="color: #7b3f98; font-weight: bold;">
+			Click here to confirm
+		</a>
+		<p>If you did not request this, please ignore this email.</p>
+	</body>
 	</html>
 	`
 
@@ -76,7 +82,7 @@ func (h *Controller) ListenEmailRegisterConfirm() error {
 		if err := h.emailSender.SendMail(
 			[]string{msg.Email},
 			"Complete Registration Process",
-			fmt.Sprintf(msgFormat, lnk, lnk),
+			fmt.Sprintf(msgFormat, lnk),
 			&sendmail.SendMailParams{
 				BodyType: "text/html",
 			},

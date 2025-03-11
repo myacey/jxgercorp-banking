@@ -20,6 +20,20 @@
                     <span class="owner">{{ username }}</span>
                 </div>
             </div>
+            
+            <!-- Окно создания перевода -->
+            <div v-if="showModal" class="modal-overlay" @click.self="showModal=false">
+                <div class="modal">
+                    <h3>New Transaction</h3>
+                    <input v-model="recipient" type="text" placeholder="Recipient">
+                    <input v-model.number="amount" type="number" placeholder="Amount">
+
+                    <div class="buttons">
+                        <button class="btn btn-secondary" @click="showModal=false">Cancel</button>
+                        <button class="btn btn-primary" @click="commitTransaction">Commit</button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Правое меню истории -->
             <div class="history">
@@ -36,29 +50,53 @@
                     </span>
                 </div>
 
-                <button class="btn btn-secondary">see more -></button>
+                <button class="btn btn-secondary" @click="showTrxHistory">see more -></button>
             </div>
         </div>
 
-        <!-- Окно создания перевода -->
-        <div v-if="showModal" class="modal-overlay" @click.self="showModal=false">
+        <!-- Окно истории переводов -->
+         <div v-if="showTrxHistoryModel" class="modal-overlay" @click.self="showTrxHistoryModel=false">
             <div class="modal">
-                <h3>New Transaction</h3>
-                <input v-model="recipient" type="text" placeholder="Recipient">
-                <input v-model.number="amount" type="number" placeholder="Amount">
+                <h3>Transaction History</h3>
+                <div class="divider"></div>
+                
+                <div v-if="trxHistory.length > 0" class="transactions-list">
 
-                <div class="buttons">
-                    <button class="btn btn-secondary" @click="showModal=false">Cancel</button>
-                    <button class="btn btn-primary" @click="commitTransaction">Commit</button>
+                    <div v-for="(entry, index) in trxHistory" :key="index" class="history-entry">
+                        <!-- <span class="entry-created-at">{{ entry.createdAt }}</span> -->
+                        <div class="timestamp">
+                            <span class="date">{{ formatDate(entry.createdAt) }}</span>
+                            <span class="time">{{ formatTime(entry.createdAt) }}</span>
+                        </div>
+                        <div class="avatar-and-entry-name">
+                            <div class="avatar"></div>
+                            <span class="entry-name">{{ entry.withUser }}</span>
+                        </div>
+                        <span :class="entry.amount > 0 ? 'positive' : 'negative'">
+                            {{ entry.amount > 0 ? '+' : '' }}{{ entry.amount }}
+                        </span>
+                    </div>
+
                 </div>
+                <div v-else>
+                    No transactions found
+                </div>
+
+                <div class="query-control">
+                    <button v-if="trxHistoryOffset > 0"  class="btn-nav" @click="decreaseOffset" :disabled="trxHistoryOffset===0">←</button>
+                    <!-- <span>Offset: {{ trxHistoryOffset }}, Limit: {{ trxHistoryLimit }}</span> -->
+                    <button v-if="hasNextPage" class="btn-nav" @click="increaseOffset">→</button>
+                </div>
+
             </div>
-        </div>
+
+         </div>
         
     </div>
 </template>
 
 <script>
-import { createTransaction, getUserBalance, searchEntries } from '@/api/api';
+import { createTransaction, fetchTransactions, getUserBalance } from '@/api/api';
 import { getUsernameFromToken } from '@/utils/auth';
 import { convertKeysToCamel } from '@/utils/snake2camel';
 import { snake } from "case";
@@ -73,6 +111,12 @@ export default {
             showModal: false,
             recipient: '',
             amount: '',
+
+            showTrxHistoryModel: false,
+            trxHistory: [],
+            trxHistoryOffset: 0,
+            trxHistoryLimit: 10,
+            hasNextPage: false,
         }
     },
     methods: {
@@ -84,11 +128,28 @@ export default {
             const snakeSearchTrxData = Object.fromEntries(
                 Object.entries(searchTrxData).map(([key, value]) => [snake(key), value])
             );
-            const responseSnake = await searchEntries(searchTrxData);
+            const responseSnake = await fetchTransactions(snakeSearchTrxData);
             console.log('fetched transactions:', responseSnake);
 
             this.entries = (convertKeysToCamel(responseSnake));
             console.log('transactions:', this.entries);
+        },
+        async fetchTrxHistory() {
+            const fetchTrxHistory = {
+                offset: this.trxHistoryOffset,
+                limit: this.trxHistoryLimit + 1, // запрашиваем на 1 запись больше
+            };
+            const snakeSearchTrxData = Object.fromEntries(
+                Object.entries(fetchTrxHistory).map(([key, value]) => [snake(key), value])
+            );
+
+            const responseSnake = await fetchTransactions(snakeSearchTrxData);
+            console.log('fetched transactions:', responseSnake);
+
+            this.trxHistory = (convertKeysToCamel(responseSnake));
+            this.hasNextPage = responseSnake.length > this.trxHistoryLimit;
+            this.trxHistory = this.trxHistory.slice(0, this.trxHistoryLimit);
+            console.log('transactions in history:', this.trxHistory); 
         },
         async commitTransaction() {
             if (!this.recipient || !this.amount) return;
@@ -104,14 +165,21 @@ export default {
                 this.showModal = false;
                 this.recipient = '';
                 this.amount = '';
-                this.getBalance();
+                await this.getBalance();
                 this.getLastEntries();
             } catch(err) {
                 console.log('Transaction failed:', err)
             }
         },
-        seeMore() {
-            this.$router.push('/history');
+        decreaseOffset() {
+            if (this.trxHistoryOffset > 0) {
+                this.trxHistoryOffset -= this.trxHistoryLimit;
+                this.fetchTrxHistory();
+            }
+        },
+        increaseOffset() {
+            this.trxHistoryOffset += this.trxHistoryLimit;
+            this.fetchTrxHistory();
         },
         async getBalance() {
             try {
@@ -119,6 +187,18 @@ export default {
             } catch (error) {
                 console.log('Cant recieve usr balance:', error)
             }
+        },
+        async showTrxHistory() {
+            this.fetchTrxHistory();
+            this.showTrxHistoryModel = true;
+        },
+        formatDate(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+        },
+        formatTime(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
     },
 
@@ -248,10 +328,12 @@ export default {
 }
 
 .divider {
-    height: 2px;
-    background: black;
-    margin-bottom: 10px;
+    width: 100%;
+    height: 1px;
+    background-color: #ccc;
+    margin: 10px 0;
 }
+
 
 .avatar-and-entry-name {
     display: flex;
@@ -269,12 +351,50 @@ export default {
     border-bottom: 1px solid #ddd;
 }
 
+.history-entry {
+    display: flex;
+    align-items: center;
+    gap: 100px;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #ddd;
+}
+
 .positive {
     color: green;
 }
 
 .negative {
     color: darkred;
+}
+
+.transactions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.timestamp {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+}
+
+.date {
+  font-weight: bold;
+}
+
+.time {
+  color: gray;
+  opacity: 0.7;
+  font-size: 0.8rem;
+}
+
+.btn-nav {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
 }
 
 </style>

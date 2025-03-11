@@ -7,6 +7,7 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
 	"github.com/myacey/jxgercorp-banking/services/shared/ctxkeys"
 	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
+	"github.com/opentracing/opentracing-go"
 )
 
 func (h *Handler) AuthTokenMiddleware() gin.HandlerFunc {
@@ -45,3 +46,18 @@ func (h *Handler) AuthTokenMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+func TracingMiddleware(tracer opentracing.Tracer) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		span := tracer.StartSpan(c.FullPath())
+		tracer.Inject(span.Context(), opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(c.Request.Header))
+		println(span)
+		c.Next()
+		span.Finish()
+	}
+}
+
+// func RequestIDMiddleware() gin.HandlerFunc {
+// 	return func(c *gin.Context) {
+// 	}
+// }

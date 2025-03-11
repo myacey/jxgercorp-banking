@@ -21,11 +21,6 @@ DB_URL=postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(POSTGRES_
 sqlc:
 	sqlc generate
 
-up:
-	go run user/cmd/main.go
-	go run token/cmd/main.go
-	go run api-gateway/cmd/main.go
-
 # redis:
 # 	docker run --name redis -p 6379:6379 -d redis:7-alpine
 

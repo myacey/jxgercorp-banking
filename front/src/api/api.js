@@ -28,15 +28,16 @@ export const loginUser = async (userData) => {
     }
 };
 
-export const fetchTransactions = async (userData) => {
+export const fetchTransactions = async (data) => {
     try {
-        const response = await apiClient.get('v1/transaction/history', userData, {
+        const response = await apiClient.get('v1/transaction/search', {
+            params: data,
             withCredentials: true,
         });
         return response.data
     } catch(error) {
-        console.log(error)
-        throw error.response || {data: {error: { message: `Unknown error occured ` } } }
+        // console.log(error)
+        // throw error.response || {data: {error: { message: `Unknown error occured ` } } }
     }
 };
 
@@ -66,18 +67,18 @@ export const createTransaction = async (createTrxData) => {
     }
 };
 
-export const searchEntries = async (trxSearchData) => {
-    try {
-        const response = await apiClient.get('v1/transaction/search', trxSearchData, {
-            withCredentials: true,
-        });
-        console.log('search trx response:', response);
-        return response.data;
-    } catch(error) {
-        // console.log('cant search trx:', error.response?.data)
-        // throw error.response || { data: { error: { message: 'Unknown error occured' }  } }
-    }
-};
+// export const searchEntries = async (trxSearchData) => {
+//     try {
+//         const response = await apiClient.get('v1/transaction/', trxSearchData, {
+//             withCredentials: true,
+//         });
+//         console.log('search trx response:', response);
+//         return response.data;
+//     } catch(error) {
+//         // console.log('cant search trx:', error.response?.data)
+//         // throw error.response || { data: { error: { message: 'Unknown error occured' }  } }
+//     }
+// };
 
 export const confirmUserEmail = async (confirmParams) => {
     try {

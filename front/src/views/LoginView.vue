@@ -19,7 +19,7 @@
 
                 <!-- Кнопки -->
                 <div class="button-group">
-                    <button type="back" class="btn btn-secondary">Back</button>
+                    <button @click="goRegister" class="btn btn-secondary">Register</button>
                     <button type="submit" class="btn btn-primary">Sign in</button>
 
                 </div>
@@ -47,10 +47,11 @@ export default {
 
             // check password
             if (this.password.length === 0) {
-                this.error = 'password is too short'
-                console.log('stupid2')
-                return 
+                this.error = 'password is too short';
+                console.log('stupid2');
+                return;
             }
+
 
             // call API
             try {
@@ -63,8 +64,7 @@ export default {
 
                 // proceed successfull registration
                 console.log('Login successful:', response);
-                alert('Login succssful!');
-
+                alert('Check email for confirmation!');
                 // clear form
                 this.username = '';
                 this.password = '';
@@ -75,10 +75,9 @@ export default {
                 console.log('Extracted err message:', this.error)
             }
         },
-
-        handleBack() {
-            console.log('Go back')
-        },
+        goRegister() {
+            this.$router.push('/register')
+        }
     },
 };
 </script>

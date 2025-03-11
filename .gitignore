@@ -1,0 +1,12 @@
+.env
+
+.vscode
+
+/front/package-lock.json
+/front/yarn.lock
+/front/node_modules/
+
+/package-lock.json
+/node_modules/
+
+/services/db/data/

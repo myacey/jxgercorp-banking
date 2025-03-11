@@ -21,9 +21,8 @@
 
                 <!-- Кнопки -->
                 <div class="button-group">
-                    <button type="back" class="btn btn-secondary">Back</button>
-                    <button type="submit" class="btn btn-primary">Next</button>
-
+                    <button @click="handleBack" class="btn btn-secondary">Back</button>
+                    <button type="submit" class="btn btn-primary">Sign Up</button>
                 </div>
             </form>
         </div>
@@ -48,6 +47,12 @@ export default {
         async handleRegister() {
             // clear errors
             this.error = null;
+            
+            if (!/^[a-zA-Z0-9_]*$/.test(this.username)) {
+                console.log('username can contain only letters, numbers and underscore');
+                this.error = 'username can contain only letters, numbers and underscore';
+                return;
+            }
 
             // validate email
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -96,7 +101,7 @@ export default {
         },
 
         handleBack() {
-            console.log('Go back')
+            this.$router.push('/login')
         },
     },
 };
