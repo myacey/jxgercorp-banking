@@ -20,8 +20,6 @@ services:
       - REDIS_PASSWORD=${DB_PASSWORD}
       - REDIS_USER_PASSWORD=${DB_PASSWORD}
       - REDIS_DATABASE=0
-    # volumes:
-    #   - redis_data:/data
     command: >
       sh -c '
         mkdir -p /usr/local/etc/redis &&
