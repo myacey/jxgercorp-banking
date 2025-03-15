@@ -66,7 +66,7 @@ JXGERcorp Banking предоставляет пользователям след
     - Получение баланса пользователя.
     - Заголовок запроса:
         ```sh
-        Bearer Token: <auth token>
+        Bearer Token: your-auth-token
         ```
     - Пример ответа:
         ```json
