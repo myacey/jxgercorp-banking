@@ -1,0 +1,130 @@
+services:
+  # PSQL
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    networks:
+      - backend-net
+    volumes:
+      - ./services/db/data/:/var/lib/postgresql/data
+  
+  # REDIS
+  redis:
+    image: redis:alpine
+    environment:
+      - REDIS_PASSWORD=${DB_PASSWORD}
+      - REDIS_USER_PASSWORD=${DB_PASSWORD}
+      - REDIS_DATABASE=0
+    command: >
+      sh -c '
+        mkdir -p /usr/local/etc/redis &&
+        echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+        echo "requirepass $DB_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+        echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
+        echo "user $REDIS_USER on >$DB_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+      '
+    ports:
+      - "6379:6379" 
+    networks:
+      - backend-net
+  
+  # MIGRATIONS
+  migrate:
+      image: migrate/migrate
+      networks:
+          - backend-net
+      volumes:
+          - ./services/db//migration/:/migrations
+      entrypoint: ["/bin/sh", "/migrations/migrate-entrypoint.sh"]
+      links:
+        - postgres
+      depends_on:
+        - postgres
+    
+  kafka:
+    image: apache/kafka-native
+    ports:
+      - "9092:9092"
+    environment:
+      # Listeners
+      KAFKA_LISTENERS: controller://localhost:9091, HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,DOCKER:PLAINTEXT,HOST:PLAINTEXT
+
+      # KRfat
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9091
+
+      # Listeners for broker-broker communication
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
+
+      # for single-node cluster
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - backend-net
+  
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686"  # UI
+      - "14268:14268"  # HTTP-интерфейс для отправки трассировок
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+    networks:
+      - backend-net
+
+
+  # API-GATEWAY
+  # api-gateway:
+  #   build:
+  #     context: .
+  #     args:
+  #       SERVICE_NAME: api-gateway
+  #       PORT: 80
+  #   ports:
+  #     - "80:80"
+  #   networks:
+  #     - backend-net
+  
+  # # USER
+  # user-microservice:
+  #   build:
+  #     context: .
+  #     args:
+  #       SERVICE_NAME: user
+  #       PORT: 8081
+  #   ports:
+  #     - "8081:8081"
+  #   networks:
+  #     - backend-net
+  #   depends_on:
+  #     - postgres
+
+  # # TOKEN
+  # token-microservice:
+  #   build:
+  #     context: .
+  #     args:
+  #       SERVICE_NAME: token
+  #       PORT: 8083
+  #   ports:
+  #     - "8083:8083"
+  #   networks:
+  #     - backend-net
+  #   depends_on:
+  #     - redis
+  
+  
+networks:
+  backend-net:
+    driver: bridge
