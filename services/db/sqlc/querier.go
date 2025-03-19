@@ -9,7 +9,6 @@ import (
 )
 
 type Querier interface {
-	ChangeUserBalance(ctx context.Context, arg ChangeUserBalanceParams) (User, error)
 	CreateTransaction(ctx context.Context, arg CreateTransactionParams) (Transaction, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteUserByUsername(ctx context.Context, username string) error
@@ -18,6 +17,7 @@ type Querier interface {
 	SearchIncomeTransactions(ctx context.Context, arg SearchIncomeTransactionsParams) ([]Transaction, error)
 	SearchOutcomeTransactions(ctx context.Context, arg SearchOutcomeTransactionsParams) ([]Transaction, error)
 	SearchTransactionsWithUser(ctx context.Context, arg SearchTransactionsWithUserParams) ([]Transaction, error)
+	UpdateTwoUserBalance(ctx context.Context, arg UpdateTwoUserBalanceParams) ([]UpdateTwoUserBalanceRow, error)
 	UpdateUserInfo(ctx context.Context, arg UpdateUserInfoParams) (User, error)
 }
 

@@ -13,6 +13,7 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/shared/backconfig"
 	"github.com/myacey/jxgercorp-banking/services/shared/logging"
 	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
+	"github.com/myacey/jxgercorp-banking/services/shared/telemetry"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/confirmation"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/controller"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/repository/postgresrepo"
@@ -42,8 +43,16 @@ func main() {
 	defer conn.Close()
 	logger.Debug("postgres conn initialized")
 
+	// Tracer for Telemetry (Jaeger)
+	tp, err := telemetry.StartTracer("user-service", "0.0.1")
+	if err != nil {
+		panic(err)
+	}
+	defer tp.Shutdown(context.Background())
+	// tracer := otel.Tracer("user-service")
+
 	// user repository
-	userRepo := postgresrepo.NewUserRepo(psqlQueries, logger)
+	userRepo := postgresrepo.NewUserRepo(psqlQueries, logger, tp.Tracer("repository"))
 
 	// grpc conn with token service
 	grpcConn, err := grpc.NewClient("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -53,28 +62,24 @@ func main() {
 	defer grpcConn.Close()
 	tokenServiceRPC := tokenpb.NewTokenServiceClient(grpcConn)
 
-	// CONFIRMATION
-	// repo
+	// redis
 	rdb, err := redisrepo.ConfigureRedisClient(&config)
 	if err != nil {
 		panic(err)
 	}
-	confirmRepo := redisrepo.NewConfirmationCodesRepo(rdb, logger)
-	cnfrmService := confirmation.NewConfirmationService(confirmRepo, "notif.email.register.confirm", 0)
 
-	srv := service.NewService(userRepo, tokenServiceRPC, logger, cnfrmService)
+	// CONFIRMATION SERVICE
+	// repo
+	confirmRepo := redisrepo.NewConfirmationCodesRepo(rdb, logger, tp.Tracer("confirmation-repository"))
+	cnfrmService := confirmation.NewConfirmationService(confirmRepo, "notif.email.register.confirm", 0, tp.Tracer("confirmation-service"))
 
-	ctrller := controller.NewController(srv, tokenServiceRPC, logger)
+	srv := service.NewService(userRepo, tokenServiceRPC, logger, cnfrmService, tp.Tracer("service"))
 
-	// Настройка OTEL с Jaeger экспортером
-	tp, err := tracing.InitTracer("api-gateway")
-	if err != nil {
-		logger.Fatal(err)
-	}
-	defer tp.Shutdown(context.Background())
+	ctrller := controller.NewController(srv, tokenServiceRPC, logger, tp.Tracer("controller"))
 
 	r := gin.Default()
-	r.Use(ctrller.TracingMiddleware("user service"))
+	r.ContextWithFallback = true
+	r.Use(ctrller.TracingMiddleware())
 
 	// add CORS
 	r.Use(cors.New(cors.Config{

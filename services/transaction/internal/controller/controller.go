@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
 	"github.com/myacey/jxgercorp-banking/services/transaction/internal/service"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -15,17 +16,22 @@ import (
 type ControllerInterface interface {
 	CreateNewTransaction(c *gin.Context)
 	SearchEntriesForUser(c *gin.Context)
+
+	TracingMiddleware() gin.HandlerFunc
 }
 
 type Controller struct {
 	srv service.ServiceInterface
 	lg  *zap.SugaredLogger
+
+	tracer trace.Tracer
 }
 
-func NewController(srv service.ServiceInterface, lg *zap.SugaredLogger) ControllerInterface {
+func NewController(srv service.ServiceInterface, lg *zap.SugaredLogger, tr trace.Tracer) ControllerInterface {
 	return &Controller{
-		srv: srv,
-		lg:  lg,
+		srv:    srv,
+		lg:     lg,
+		tracer: tr,
 	}
 }
 

@@ -3,6 +3,7 @@ package postgresrepo
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/lib/pq"
 	db "github.com/myacey/jxgercorp-banking/services/db/sqlc"
@@ -23,6 +24,10 @@ func ConfiurePostgres(config backconfig.Config) (*db.Queries, *sql.DB, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("cannot ping postgres:", err)
 	}
+
+	conn.SetMaxOpenConns(200)
+	conn.SetMaxIdleConns(50)
+	conn.SetConnMaxIdleTime(5 * time.Minute)
 
 	queries := db.New(conn)
 

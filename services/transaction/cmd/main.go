@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/myacey/jxgercorp-banking/services/shared/backconfig"
 	"github.com/myacey/jxgercorp-banking/services/shared/logging"
+	"github.com/myacey/jxgercorp-banking/services/shared/telemetry"
 	"github.com/myacey/jxgercorp-banking/services/transaction/internal/controller"
 	"github.com/myacey/jxgercorp-banking/services/transaction/internal/repository/postgresrepo"
 	"github.com/myacey/jxgercorp-banking/services/transaction/internal/service"
@@ -28,24 +31,20 @@ func main() {
 	defer conn.Close()
 	lg.Debug("postgres conn initialized")
 
-	trxRepo := postgresrepo.NewPostgresTransactionRepo(psqlQueries, conn, lg)
-	srv := service.NewService(trxRepo, lg)
-	ctrller := controller.NewController(srv, lg)
+	tp, err := telemetry.StartTracer("transaction-service", "0.0.1")
+	if err != nil {
+		panic(err)
+	}
+	defer tp.Shutdown(context.Background())
+
+	trxRepo := postgresrepo.NewPostgresTransactionRepo(psqlQueries, conn, lg, tp.Tracer("repository"))
+	srv := service.NewService(trxRepo, lg, tp.Tracer("service"))
+	ctrller := controller.NewController(srv, lg, tp.Tracer("controller"))
 
 	r := gin.Default()
+	r.Use(ctrller.TracingMiddleware())
 
 	// add CORS
-	// cfg := cors.DefaultConfig()
-	// cfg.AddAllowHeaders("Authorization")
-	// cfg.AllowCredentials = true
-	// // cfg.AllowAllOrigins = false
-	// // I think you should whitelist a limited origins instead:
-	// cfg.AllowOrigins = []string{"http://localhost:8080"}
-	// // config.AllowOriginFunc = func(origin string) bool {
-	// // return true
-	// // }
-	// r.Use(cors.New(cfg))
-
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:8080"},                            // Разрешённый фронтенд-адрес
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}, // Разрешённые методы

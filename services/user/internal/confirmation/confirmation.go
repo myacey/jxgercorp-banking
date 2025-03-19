@@ -3,7 +3,6 @@ package confirmation
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/shared/util"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/repository"
 	"github.com/segmentio/kafka-go"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type ConfirmationServiceInterface interface {
@@ -24,17 +24,23 @@ type ConfirmationService struct {
 
 	registerCodesTopic   string
 	registerCodesPartion int
+
+	tracer trace.Tracer
 }
 
-func NewConfirmationService(repo repository.ConfirmCodesRepository, topic string, partion int) ConfirmationServiceInterface {
+func NewConfirmationService(repo repository.ConfirmCodesRepository, topic string, partion int, tr trace.Tracer) ConfirmationServiceInterface {
 	return &ConfirmationService{
 		confirmCodesRepo:     repo,
 		registerCodesTopic:   topic,
 		registerCodesPartion: partion,
+		tracer:               tr,
 	}
 }
 
 func (cs *ConfirmationService) GenerateAccountConfirmation(c context.Context, username, email string) error {
+	c, span := cs.tracer.Start(c, "email-confirmation: GenerateAccountConfirmation")
+	defer span.End()
+
 	confirmCode := util.RandomString(32)
 
 	err := cs.confirmCodesRepo.CreateCode(c, username, confirmCode)
@@ -74,8 +80,11 @@ func (cs *ConfirmationService) GenerateAccountConfirmation(c context.Context, us
 }
 
 func (cs *ConfirmationService) CheckConfirmCode(c context.Context, username, confirmCode string) error {
+	c, span := cs.tracer.Start(c, "email-confirmation: CheckConfirmCode")
+	defer span.End()
+
 	dbConfirmCode, err := cs.confirmCodesRepo.GetCode(c, username)
-	log.Print("DB CONFIRMATION CODE:'", dbConfirmCode, "', HAS: '", confirmCode, "'\n")
+	// log.Print("DB CONFIRMATION CODE:'", dbConfirmCode, "', HAS: '", confirmCode, "'\n")
 	if err != nil || dbConfirmCode != confirmCode {
 		return cstmerr.New(http.StatusBadRequest, "invalid confirm code", nil)
 	}

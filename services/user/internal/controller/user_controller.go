@@ -7,8 +7,6 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
 	"github.com/myacey/jxgercorp-banking/services/shared/ctxkeys"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/models"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 const secondsPerDay = 86400
@@ -49,6 +47,10 @@ type LoginReq struct {
 
 // Login checks user data with existing in db and sends auth token
 func (h *Controller) Login(c *gin.Context) {
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller: Login")
+	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
+
 	var req LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.JSONError(c, err)
@@ -67,11 +69,9 @@ func (h *Controller) Login(c *gin.Context) {
 
 // GetUserBalance checks user token and return user's balance
 func (h *Controller) GetUserBalance(c *gin.Context) {
-	tracer := otel.Tracer("user-controller")
-	ctx, span := tracer.Start(c.Request.Context(), "UserController.CreateUser")
-	span.SetAttributes(attribute.String("handler", "CreateUser"))
-	c.Request = c.Request.WithContext(ctx)
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller: GetUserBalance")
 	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
 
 	username := c.GetHeader("X-User-Username")
 	if username == "" {
@@ -94,6 +94,10 @@ type ConfirmUserEmailReq struct {
 }
 
 func (h *Controller) ConfirmUserEmail(c *gin.Context) {
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller: ConfirmUserEmail")
+	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
+
 	var req ConfirmUserEmailReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.lg.Debug(err)
@@ -117,15 +121,13 @@ func (h *Controller) ConfirmUserEmail(c *gin.Context) {
 }
 
 type GetUserByIDReq struct {
-	ID int64 `json:"id", binding:"required,number"`
+	ID int64 `json:"id" binding:"required,number"`
 }
 
 func (h *Controller) GetUserByID(c *gin.Context) {
-	tracer := otel.Tracer("user-controller")
-	ctx, span := tracer.Start(c.Request.Context(), "UserController.CreateUser")
-	span.SetAttributes(attribute.String("handler", "CreateUser"))
-	c.Request = c.Request.WithContext(ctx)
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller: GetUserByID")
 	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
 
 	var req GetUserByIDReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -147,6 +149,10 @@ type GetUserByUsernameReq struct {
 }
 
 func (h *Controller) GetUserByUsername(c *gin.Context) {
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller: GetUserByUsername")
+	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
+
 	var req GetUserByUsernameReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.JSONError(c, err)
@@ -167,6 +173,10 @@ type DeleteUserByUsernameReq struct {
 }
 
 func (h *Controller) DeleteUserByUsername(c *gin.Context) {
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller: DeleteUserByUsername")
+	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
+
 	var req DeleteUserByUsernameReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.JSONError(c, err)
@@ -189,6 +199,10 @@ type UpdateUserInfoReq struct {
 
 // TODO: change
 func (h *Controller) UpdateUserInfo(c *gin.Context) {
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller: UpdateUserInfo")
+	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
+
 	var req UpdateUserInfoReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.JSONError(c, err)

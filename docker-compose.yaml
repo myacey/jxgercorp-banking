@@ -6,13 +6,34 @@ services:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+    command: > 
+      -c 'max_connections=600'
+      && -c 'shared_buffers=120MB'
+      && -c 'tcp_keepalives_idle = 30'
+      && -c 'tcp_keepalives_interval = 10'
+      && -c 'tcp_keepalives_count = 5'
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT}:5432"
     networks:
       - backend-net
     volumes:
       - ./services/db/data/:/var/lib/postgresql/data
-  
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "8.0"
+          memory: 6G
+        reservations:
+          cpus: "4.0"
+          memory: 1G
+
   # REDIS
   redis:
     image: redis:alpine
@@ -35,6 +56,9 @@ services:
       - "6379:6379" 
     networks:
       - backend-net
+    depends_on:
+      postgres:
+        condition: service_healthy
   
   # MIGRATIONS
   migrate:
@@ -43,11 +67,13 @@ services:
           - backend-net
       volumes:
           - ./services/db//migration/:/migrations
-      entrypoint: ["/bin/sh", "/migrations/migrate-entrypoint.sh"]
+      command: ["-path", "/migrations", "-database", "postgresql://${POSTGRES_USER}:${DB_PASSWORD:-invalid}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable&password=${POSTGRES_PASSWORD}", "up"]
       links:
         - postgres
       depends_on:
-        - postgres
+        postgres:
+          condition: service_healthy
+
     
   kafka:
     image: apache/kafka-native
@@ -77,8 +103,6 @@ services:
     image: jaegertracing/all-in-one:latest
     ports:
       - "16686:16686"  # UI
-      - "14268:14268"  # HTTP-интерфейс для отправки трассировок
-      - "4317:4317"    # OTLP gRPC
       - "4318:4318"    # OTLP HTTP
     networks:
       - backend-net

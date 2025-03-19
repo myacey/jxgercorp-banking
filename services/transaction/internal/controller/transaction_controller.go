@@ -14,6 +14,10 @@ type CreateTrxReq struct {
 }
 
 func (h *Controller) CreateNewTransaction(c *gin.Context) {
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller: CreateNewTransaction")
+	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
+
 	var req CreateTrxReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.JSONError(c, err)
@@ -23,6 +27,11 @@ func (h *Controller) CreateNewTransaction(c *gin.Context) {
 	fromUser := c.GetHeader("X-User-Username")
 	if fromUser == "" {
 		h.JSONError(c, cstmerr.ErrInvalidToken)
+		return
+	}
+
+	if fromUser == req.ToUser {
+		h.JSONError(c, cstmerr.New(http.StatusBadRequest, "cant send money to yourself", nil))
 		return
 	}
 
@@ -41,6 +50,10 @@ type GetUserTrxReq struct {
 }
 
 func (h *Controller) SearchEntriesForUser(c *gin.Context) {
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller: SearchEntriesForUser")
+	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
+
 	// var req GetUserTrxReq
 	// if err := c.ShouldBindJSON(&req); err != nil {
 	// 	h.JSONError(c, err)
