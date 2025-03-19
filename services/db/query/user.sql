@@ -29,9 +29,11 @@ RETURNING *;
 DELETE FROM users
 WHERE username = $1;
 
--- name: ChangeUserBalance :one
+-- name: UpdateTwoUserBalance :many
 UPDATE users
-SET
-    balance = balance + @add_balance::BIGINT
-WHERE username = $1
-RETURNING *;
+SET balance = CASE
+    WHEN username = sqlc.arg(from_username) THEN balance - $1
+    WHEN username = sqlc.arg(to_username) THEN balance + $1
+END
+WHERE username IN (sqlc.arg(from_username), sqlc.arg(to_username))
+RETURNING username, balance;

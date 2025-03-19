@@ -3,7 +3,6 @@ package postgresrepo
 import (
 	"database/sql"
 	"errors"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -51,18 +50,19 @@ func (r *PostgresTransactionRepo) CreateTransactionTX(c *gin.Context, fromUser, 
 
 	q := r.store.WithTx(tx)
 
-	usr, err := q.GetUserByUsername(c, fromUser)
+	res, err := q.UpdateTwoUserBalance(c, db.UpdateTwoUserBalanceParams{
+		FromUsername: fromUser,
+		ToUsername:   toUser,
+		Balance:      amount,
+	})
 	if err != nil {
-		switch {
-		case errors.Is(err, sql.ErrNoRows):
-			return nil, cstmerr.New(http.StatusBadRequest, "no user found", nil)
-		default:
-			return nil, cstmerr.New(http.StatusInternalServerError, cstmerr.ErrUnknown.Error(), err)
-		}
+		return nil, cstmerr.New(http.StatusInternalServerError, cstmerr.ErrUnknown.Error(), err)
 	}
 
-	if usr.Balance-amount < 0 {
-		return nil, cstmerr.New(http.StatusBadRequest, "not enough money", nil)
+	for _, usr := range res {
+		if usr.Username == fromUser && usr.Balance < 0 {
+			return nil, cstmerr.New(http.StatusBadRequest, "not enough money", nil)
+		}
 	}
 
 	arg := db.CreateTransactionParams{
@@ -75,28 +75,8 @@ func (r *PostgresTransactionRepo) CreateTransactionTX(c *gin.Context, fromUser, 
 		return nil, cstmerr.New(http.StatusInternalServerError, cstmerr.ErrUnknown.Error(), err)
 	}
 
-	fromUserBalanceArg := db.ChangeUserBalanceParams{
-		Username:   fromUser,
-		AddBalance: -amount,
-	}
-	_, err = q.ChangeUserBalance(c, fromUserBalanceArg)
-	if err != nil {
-		return nil, cstmerr.New(http.StatusInternalServerError, cstmerr.ErrUnknown.Error(), err)
-	}
-
-	toUserBalanceArg := db.ChangeUserBalanceParams{
-		Username:   toUser,
-		AddBalance: +amount,
-	}
-	_, err = q.ChangeUserBalance(c, toUserBalanceArg)
-	if err != nil {
-		log.Print("6")
-		return nil, cstmerr.New(http.StatusInternalServerError, cstmerr.ErrUnknown.Error(), err)
-	}
-
 	err = tx.Commit()
 	if err != nil {
-		log.Print("7")
 		return nil, cstmerr.New(http.StatusInternalServerError, cstmerr.ErrUnknown.Error(), err)
 	}
 

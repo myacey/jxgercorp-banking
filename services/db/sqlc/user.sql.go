@@ -10,34 +10,6 @@ import (
 	"database/sql"
 )
 
-const changeUserBalance = `-- name: ChangeUserBalance :one
-UPDATE users
-SET
-    balance = balance + $2::BIGINT
-WHERE username = $1
-RETURNING id, username, email, hashed_password, balance, created_at, pending
-`
-
-type ChangeUserBalanceParams struct {
-	Username   string `json:"username"`
-	AddBalance int64  `json:"add_balance"`
-}
-
-func (q *Queries) ChangeUserBalance(ctx context.Context, arg ChangeUserBalanceParams) (User, error) {
-	row := q.db.QueryRowContext(ctx, changeUserBalance, arg.Username, arg.AddBalance)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.Username,
-		&i.Email,
-		&i.HashedPassword,
-		&i.Balance,
-		&i.CreatedAt,
-		&i.Pending,
-	)
-	return i, err
-}
-
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
     username,
@@ -117,6 +89,50 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.Pending,
 	)
 	return i, err
+}
+
+const updateTwoUserBalance = `-- name: UpdateTwoUserBalance :many
+UPDATE users
+SET balance = CASE
+    WHEN username = $2 THEN balance - $1
+    WHEN username = $3 THEN balance + $1
+END
+WHERE username IN ($2, $3)
+RETURNING username, balance
+`
+
+type UpdateTwoUserBalanceParams struct {
+	Balance      int64  `json:"balance"`
+	FromUsername string `json:"from_username"`
+	ToUsername   string `json:"to_username"`
+}
+
+type UpdateTwoUserBalanceRow struct {
+	Username string `json:"username"`
+	Balance  int64  `json:"balance"`
+}
+
+func (q *Queries) UpdateTwoUserBalance(ctx context.Context, arg UpdateTwoUserBalanceParams) ([]UpdateTwoUserBalanceRow, error) {
+	rows, err := q.db.QueryContext(ctx, updateTwoUserBalance, arg.Balance, arg.FromUsername, arg.ToUsername)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []UpdateTwoUserBalanceRow{}
+	for rows.Next() {
+		var i UpdateTwoUserBalanceRow
+		if err := rows.Scan(&i.Username, &i.Balance); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateUserInfo = `-- name: UpdateUserInfo :one
