@@ -5,6 +5,7 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/shared/converters"
 	"github.com/myacey/jxgercorp-banking/services/shared/sharedmodels"
 	"github.com/myacey/jxgercorp-banking/services/transaction/internal/repository"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -17,16 +18,24 @@ type ServiceInterface interface {
 type Service struct {
 	trxRepo repository.TransactionRepository
 	lg      *zap.SugaredLogger
+
+	tracer trace.Tracer
 }
 
-func NewService(tr repository.TransactionRepository, lg *zap.SugaredLogger) ServiceInterface {
+func NewService(tr repository.TransactionRepository, lg *zap.SugaredLogger, trace trace.Tracer) ServiceInterface {
 	return &Service{
 		trxRepo: tr,
 		lg:      lg,
+
+		tracer: trace,
 	}
 }
 
 func (s *Service) CreateNewTransaction(c *gin.Context, fromUser, toUser string, amount int64) (*sharedmodels.Trx, error) {
+	ctx, span := s.tracer.Start(c.Request.Context(), "service: CreateNewTransaction")
+	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
+
 	dbTrx, err := s.trxRepo.CreateTransactionTX(c, fromUser, toUser, amount)
 	if err != nil {
 		return nil, err
@@ -37,6 +46,10 @@ func (s *Service) CreateNewTransaction(c *gin.Context, fromUser, toUser string, 
 }
 
 func (s *Service) SearchEntriesForUser(c *gin.Context, username string, offset int, limit int) ([]*sharedmodels.Entry, error) {
+	ctx, span := s.tracer.Start(c.Request.Context(), "service: SearchEntriesForUser")
+	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
+
 	dbTrxs, err := s.trxRepo.SearchTransactionsWithUser(c, username, offset, limit)
 	if err != nil {
 		return nil, err

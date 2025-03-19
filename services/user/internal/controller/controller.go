@@ -8,6 +8,7 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
 	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/service"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
@@ -31,13 +32,16 @@ type Controller struct {
 	srv      service.ServiceInterface
 	lg       *zap.SugaredLogger
 	tokenSrv tokenpb.TokenServiceClient // for creating tokens in /register; TODO: move login to api-gateway??
+
+	tracer trace.Tracer
 }
 
-func NewController(srv service.ServiceInterface, tokenSrv tokenpb.TokenServiceClient, lg *zap.SugaredLogger) *Controller {
+func NewController(srv service.ServiceInterface, tokenSrv tokenpb.TokenServiceClient, lg *zap.SugaredLogger, tracer trace.Tracer) *Controller {
 	return &Controller{
 		srv:      srv,
 		lg:       lg,
 		tokenSrv: tokenSrv,
+		tracer:   tracer,
 	}
 }
 

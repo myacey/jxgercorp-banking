@@ -5,13 +5,12 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 )
 
 func (h *Controller) TracingMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := otel.GetTextMapPropagator().Extract(c.Request.Context(), propagation.HeaderCarrier(c.Request.Header))
-		ctx, span := h.tracer.Start(ctx, "user-service: "+c.Request.Method+" "+c.FullPath(), trace.WithSpanKind(trace.SpanKindServer))
+		ctx, span := h.tracer.Start(ctx, "transaction-service: "+c.Request.Method+" "+c.FullPath())
 		defer span.End()
 
 		span.SetAttributes(

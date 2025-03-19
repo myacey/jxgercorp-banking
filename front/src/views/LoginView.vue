@@ -64,7 +64,6 @@ export default {
 
                 // proceed successfull registration
                 console.log('Login successful:', response);
-                alert('Check email for confirmation!');
                 // clear form
                 this.username = '';
                 this.password = '';

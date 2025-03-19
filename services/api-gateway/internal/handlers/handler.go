@@ -6,18 +6,22 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
 	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
 
 type Handler struct {
 	tokenSrv tokenpb.TokenServiceClient
 	lg       *zap.SugaredLogger
+
+	tracer trace.Tracer
 }
 
-func NewHandler(tokenSrv tokenpb.TokenServiceClient, lg *zap.SugaredLogger) *Handler {
+func NewHandler(tokenSrv tokenpb.TokenServiceClient, lg *zap.SugaredLogger, tracer trace.Tracer) *Handler {
 	return &Handler{
 		tokenSrv: tokenSrv,
 		lg:       lg,
+		tracer:   tracer,
 	}
 }
 
