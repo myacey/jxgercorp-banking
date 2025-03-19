@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	db "github.com/myacey/jxgercorp-banking/services/db/sqlc"
 	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
+	"github.com/myacey/jxgercorp-banking/services/shared/sharedmodels"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/repository"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -144,11 +145,19 @@ func (r *PostgresUserRepository) UpdateUserInfo(c *gin.Context, username string,
 	defer span.End()
 	c.Request = c.Request.WithContext(ctx)
 
+	status := sharedmodels.UserStatusActive
+	if pendingStatus {
+		status = sharedmodels.UserStatusPending
+	}
+
 	arg := db.UpdateUserInfoParams{
 		Username:       username,
 		HashedPassword: sql.NullString{String: newHashedPassword, Valid: newHashedPassword != ""},
 		Email:          sql.NullString{String: newEmail, Valid: newEmail != ""},
-		Pending:        sql.NullBool{Bool: pendingStatus, Valid: !pendingStatus}, // pending can only move from true->false
+		UserStatus: db.NullUserStatus{
+			UserStatus: db.UserStatus(status),
+			Valid:      true,
+		},
 	}
 	start := time.Now()
 	dbUser, err := r.store.UpdateUserInfo(c, arg)

@@ -17,7 +17,7 @@ INSERT INTO users (
     hashed_password
 ) VALUES (
     $1, $2, $3
-) RETURNING id, username, email, hashed_password, balance, created_at, pending
+) RETURNING id, username, email, hashed_password, balance, created_at, status
 `
 
 type CreateUserParams struct {
@@ -36,7 +36,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.HashedPassword,
 		&i.Balance,
 		&i.CreatedAt,
-		&i.Pending,
+		&i.Status,
 	)
 	return i, err
 }
@@ -52,7 +52,7 @@ func (q *Queries) DeleteUserByUsername(ctx context.Context, username string) err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, username, email, hashed_password, balance, created_at, pending FROM users
+SELECT id, username, email, hashed_password, balance, created_at, status FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -66,13 +66,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.HashedPassword,
 		&i.Balance,
 		&i.CreatedAt,
-		&i.Pending,
+		&i.Status,
 	)
 	return i, err
 }
 
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, username, email, hashed_password, balance, created_at, pending FROM users
+SELECT id, username, email, hashed_password, balance, created_at, status FROM users
 WHERE username = $1 LIMIT 1
 `
 
@@ -86,7 +86,7 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (User,
 		&i.HashedPassword,
 		&i.Balance,
 		&i.CreatedAt,
-		&i.Pending,
+		&i.Status,
 	)
 	return i, err
 }
@@ -140,17 +140,17 @@ UPDATE users
 SET
     hashed_password=COALESCE($2, hashed_password),
     email=COALESCE($3, email),
-    pending=COALESCE($4, pending)
+    status = COALESCE($4::user_status, status)
 WHERE
     username=$1
-RETURNING id, username, email, hashed_password, balance, created_at, pending
+RETURNING id, username, email, hashed_password, balance, created_at, status
 `
 
 type UpdateUserInfoParams struct {
 	Username       string         `json:"username"`
 	HashedPassword sql.NullString `json:"hashed_password"`
 	Email          sql.NullString `json:"email"`
-	Pending        sql.NullBool   `json:"pending"`
+	UserStatus     NullUserStatus `json:"user_status"`
 }
 
 func (q *Queries) UpdateUserInfo(ctx context.Context, arg UpdateUserInfoParams) (User, error) {
@@ -158,7 +158,7 @@ func (q *Queries) UpdateUserInfo(ctx context.Context, arg UpdateUserInfoParams) 
 		arg.Username,
 		arg.HashedPassword,
 		arg.Email,
-		arg.Pending,
+		arg.UserStatus,
 	)
 	var i User
 	err := row.Scan(
@@ -168,7 +168,7 @@ func (q *Queries) UpdateUserInfo(ctx context.Context, arg UpdateUserInfoParams) 
 		&i.HashedPassword,
 		&i.Balance,
 		&i.CreatedAt,
-		&i.Pending,
+		&i.Status,
 	)
 	return i, err
 }

@@ -5,8 +5,55 @@
 package db
 
 import (
+	"database/sql/driver"
+	"fmt"
 	"time"
+
+	"github.com/myacey/jxgercorp-banking/services/shared/sharedmodels"
 )
+
+type UserStatus string
+
+const (
+	UserStatusPending UserStatus = "pending"
+	UserStatusActive  UserStatus = "active"
+	UserStatusBanned  UserStatus = "banned"
+)
+
+func (e *UserStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = UserStatus(s)
+	case string:
+		*e = UserStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for UserStatus: %T", src)
+	}
+	return nil
+}
+
+type NullUserStatus struct {
+	UserStatus UserStatus `json:"user_status"`
+	Valid      bool       `json:"valid"` // Valid is true if UserStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullUserStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.UserStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.UserStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullUserStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.UserStatus), nil
+}
 
 type Transaction struct {
 	ID        int64     `json:"id"`
@@ -17,11 +64,11 @@ type Transaction struct {
 }
 
 type User struct {
-	ID             int64     `json:"id"`
-	Username       string    `json:"username"`
-	Email          string    `json:"email"`
-	HashedPassword string    `json:"hashed_password"`
-	Balance        int64     `json:"balance"`
-	CreatedAt      time.Time `json:"created_at"`
-	Pending        bool      `json:"pending"`
+	ID             int64                   `json:"id"`
+	Username       string                  `json:"username"`
+	Email          string                  `json:"email"`
+	HashedPassword string                  `json:"hashed_password"`
+	Balance        int64                   `json:"balance"`
+	CreatedAt      time.Time               `json:"created_at"`
+	Status         sharedmodels.UserStatus `json:"status"`
 }

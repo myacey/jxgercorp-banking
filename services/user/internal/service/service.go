@@ -100,7 +100,7 @@ func (s *Service) Login(c *gin.Context, username, password string) (string, erro
 		return "", err
 	}
 
-	if usr.Pending {
+	if usr.Status == sharedmodels.UserStatusPending {
 		return "", cstmerr.New(http.StatusUnauthorized, "check email for account comfirmation", nil)
 	}
 

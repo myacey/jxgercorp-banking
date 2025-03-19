@@ -20,7 +20,7 @@ UPDATE users
 SET
     hashed_password=COALESCE(sqlc.narg(hashed_password), hashed_password),
     email=COALESCE(sqlc.narg(email), email),
-    pending=COALESCE(sqlc.narg(pending), pending)
+    status = COALESCE(sqlc.narg(user_status)::user_status, status)
 WHERE
     username=$1
 RETURNING *;

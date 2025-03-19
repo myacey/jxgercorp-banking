@@ -13,3 +13,6 @@ sql:
       overrides:
       - db_type: "timestamptz"
         go_type: "time.Time"
+      - db_type: "user_status"
+        go_type: "github.com/myacey/jxgercorp-banking/services/shared/sharedmodels.UserStatus"
+        go_struct_tag: json:"status"
