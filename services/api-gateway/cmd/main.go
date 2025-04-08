@@ -16,11 +16,17 @@ import (
 
 func main() {
 	// Telemetry
-	tracer, err := telemetry.StartTracer("api-gateway", "0.0.1")
+	tracer, metricExporter, err := telemetry.StartTracer("api-gateway", "0.0.1")
 	if err != nil {
 		panic(err)
 	}
 	defer tracer.Shutdown(context.Background())
+	defer metricExporter.Shutdown(context.Background())
+
+	// metrics, err := telemetry.NewMetrics("api-gateway")
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	logger, err := logging.ConfigureLogger()
 	if err != nil {
@@ -42,7 +48,8 @@ func main() {
 	handl := handlers.NewHandler(tokenServiceRPC, logger, tracer.Tracer("api-gateway"))
 
 	r := gin.Default()
-	r.Use(handl.TracingMiddleware())
+	// r.Use(handl.TracingMiddleware())
+	r.Use(handl.MetricsMiddleware())
 
 	public := r.Group("/api/v1")
 	{

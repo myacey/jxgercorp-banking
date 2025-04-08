@@ -44,12 +44,13 @@ func main() {
 	logger.Debug("postgres conn initialized")
 
 	// Tracer for Telemetry (Jaeger)
-	tp, err := telemetry.StartTracer("user-service", "0.0.1")
+	tp, _, err := telemetry.StartTracer("user-service", "0.0.1")
 	if err != nil {
 		panic(err)
 	}
 	defer tp.Shutdown(context.Background())
-	// tracer := otel.Tracer("user-service")
+	metricsFactory := telemetry.NewMetricsFactory("user-service")
+	userMetrics := metricsFactory.NewUserMetrics()
 
 	// user repository
 	userRepo := postgresrepo.NewUserRepo(psqlQueries, logger, tp.Tracer("repository"))
@@ -75,7 +76,7 @@ func main() {
 
 	srv := service.NewService(userRepo, tokenServiceRPC, logger, cnfrmService, tp.Tracer("service"))
 
-	ctrller := controller.NewController(srv, tokenServiceRPC, logger, tp.Tracer("controller"))
+	ctrller := controller.NewController(srv, tokenServiceRPC, logger, tp.Tracer("controller"), *userMetrics)
 
 	r := gin.Default()
 	r.ContextWithFallback = true

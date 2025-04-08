@@ -66,15 +66,15 @@ services:
       networks:
           - backend-net
       volumes:
-          - ./services/db//migration/:/migrations
-      command: ["-path", "/migrations", "-database", "postgresql://${POSTGRES_USER}:${DB_PASSWORD:-invalid}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable&password=${POSTGRES_PASSWORD}", "up"]
+          - ./services/db/migration/:/migrations
+      command: ["-path", "/migrations", "-database", "postgresql://${POSTGRES_USER}:${DB_PASSWORD:-invalid}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable", "up"]
       links:
         - postgres
       depends_on:
         postgres:
           condition: service_healthy
 
-    
+  # KAFKA
   kafka:
     image: apache/kafka-native
     ports:
@@ -99,14 +99,83 @@ services:
     networks:
       - backend-net
   
+  # OTEL-COLLECTOR
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./services/monitoring/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4318:4318"
+      - "9123:9123"
+    networks:
+      - backend-net
+    depends_on:
+      - jaeger
+      - prometheus
+
+  # JAEGER
   jaeger:
     image: jaegertracing/all-in-one:latest
     ports:
-      - "16686:16686"  # UI
-      - "4318:4318"    # OTLP HTTP
+      - "16686:16686"   # UI
+      - "4317:4317"     # listen gRPC
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
     networks:
       - backend-net
 
+  # PROMETHEUS
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    command: >
+      --config.file=/etc/prometheus/prometheus.yml
+      && --web.enable-remote-write-receiver
+      && --web.enable-otlp-receiver
+    volumes:
+      - ./services/monitoring/prometheus/:/etc/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - backend-net
+    
+  # GRAFANA
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    volumes:
+      - ./services/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./services/monitoring/grafana/provisioning:/etc/grafana/provisioning/
+    ports:
+      - 3000:3000
+    links:
+      - prometheus:prometheus
+    user: ":"
+    networks:
+      - backend-net
+    
+  # NODE-EXPORTER
+  node-exporter:
+    image: prom/node-exporter
+    container_name: exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.ignored-mount-points
+      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+    ports:
+      - 9100:9100
+    networks:
+      - backend-net
+    restart: always
+    deploy:
+      mode: global
 
   # API-GATEWAY
   # api-gateway:

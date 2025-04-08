@@ -15,6 +15,7 @@ type Handler struct {
 	lg       *zap.SugaredLogger
 
 	tracer trace.Tracer
+	// metrics *telemetry.Metrics
 }
 
 func NewHandler(tokenSrv tokenpb.TokenServiceClient, lg *zap.SugaredLogger, tracer trace.Tracer) *Handler {
@@ -22,6 +23,7 @@ func NewHandler(tokenSrv tokenpb.TokenServiceClient, lg *zap.SugaredLogger, trac
 		tokenSrv: tokenSrv,
 		lg:       lg,
 		tracer:   tracer,
+		// metrics:  mtr,
 	}
 }
 

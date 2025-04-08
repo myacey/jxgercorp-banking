@@ -16,7 +16,7 @@ import (
 
 func main() {
 	// Telemetry
-	tracer, err := telemetry.StartTracer("token-service", "0.0.1")
+	tracer, _, err := telemetry.StartTracer("token-service", "0.0.1")
 	if err != nil {
 		panic(err)
 	}

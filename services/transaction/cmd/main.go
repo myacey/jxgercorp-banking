@@ -31,7 +31,7 @@ func main() {
 	defer conn.Close()
 	lg.Debug("postgres conn initialized")
 
-	tp, err := telemetry.StartTracer("transaction-service", "0.0.1")
+	tp, _, err := telemetry.StartTracer("transaction-service", "0.0.1")
 	if err != nil {
 		panic(err)
 	}

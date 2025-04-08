@@ -5,12 +5,15 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
 	"github.com/myacey/jxgercorp-banking/services/shared/ctxkeys"
 	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.18.0"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -81,6 +84,57 @@ func (h *Handler) TracingMiddleware() gin.HandlerFunc {
 		c.Request = c.Request.WithContext(ctx)
 
 		c.Next()
+	}
+}
+
+// MetricsMiddleware provides request ID and adds metrics
+// to prometheus
+func (h *Handler) MetricsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// create requestID
+		requestID := uuid.New()
+		var byteArray [16]byte
+		copy(byteArray[:], requestID[:])
+		ctx := trace.ContextWithRemoteSpanContext(
+			c.Request.Context(),
+			trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID: byteArray,
+			}),
+		)
+
+		ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(c.Request.Header))
+
+		// start a new span with the context from carrier
+		ctx, span := h.tracer.Start(ctx, "metrics-middleware: "+c.Request.Method+" "+c.FullPath())
+		defer span.End()
+		c.Request = c.Request.WithContext(ctx)
+
+		// start := time.Now()
+
+		// h.metrics.ActiveRequestsGauge.Add(c.Request.Context(), 1)
+		// defer h.metrics.ActiveRequestsGauge.Add(c.Request.Context(), -1)
+
+		c.Next()
+
+		// duration := time.Since(start)
+		status := c.Writer.Status()
+		method := c.Request.Method
+		path := c.FullPath()
+
+		attribues := []attribute.KeyValue{
+			semconv.HTTPMethod(method),
+			semconv.HTTPRoute(path),
+			semconv.HTTPStatusCode(status),
+			semconv.ServiceName("api-gateway"),
+		}
+
+		// h.metrics.RequestCounter.Add(c.Request.Context(), 1, metric.WithAttributes(attribues...))
+		// h.metrics.DurationHistogram.Record(c.Request.Context(), float64(duration.Microseconds()), metric.WithAttributes(attribues...))
+		// if status >= 500 {
+		// 	h.metrics.ErrorCounter.Add(c.Request.Context(), 1, metric.WithAttributes(attribues...))
+		// }
+
+		span.SetAttributes(attribues...)
 	}
 }
 

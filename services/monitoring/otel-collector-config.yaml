@@ -1,0 +1,46 @@
+# recieve data on 0.0.0.0:4318 (from golang)
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  resource:
+    attributes:
+      - key: service.name
+        from_attribute: service.name
+        action: insert
+      - key: service.version
+        from_attribute: service.version
+        action: insert
+  batch:
+    send_batch_size: 1024
+    timeout: 10s
+
+
+exporters:
+  prometheus:
+    endpoint: 0.0.0.0:9123
+
+  otlp/jaeger:
+    endpoint: jaeger:4317 # export directrly to jaeger on 4317 port
+    tls:
+      insecure: true
+    retry_on_failure:
+      enabled: true
+    sending_queue:
+      enabled: true
+      queue_size: 1000
+
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]         # recieve data from otlp
+      processors: [batch]       # convert to batch
+      exporters: [otlp/jaeger]  # send to jaeger
+    metrics:
+      receivers: [otlp]         # recieve data from otlp
+      processors: [batch]       # convert to batch
+      exporters: [prometheus]   # send to prometheus
