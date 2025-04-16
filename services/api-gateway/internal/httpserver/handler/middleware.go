@@ -6,9 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/myacey/jxgercorp-banking/services/shared/cstmerr"
-	"github.com/myacey/jxgercorp-banking/services/shared/ctxkeys"
-	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
+	"github.com/myacey/jxgercorp-banking/services/libs/apperror"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -23,7 +21,6 @@ func (h *Handler) AuthTokenMiddleware() gin.HandlerFunc {
 		ctx, span := h.tracer.Start(c.Request.Context(), "auth-middleware: AuthTokenMiddleware")
 		c.Request = c.Request.WithContext(ctx)
 
-		h.lg.Info(c.Request.Method)
 		if c.Request.Method == http.MethodOptions {
 			span.End()
 			c.Next()
@@ -31,32 +28,19 @@ func (h *Handler) AuthTokenMiddleware() gin.HandlerFunc {
 		}
 		authToken, err := c.Cookie("authToken")
 		if err != nil {
-			h.JSONError(c, cstmerr.ErrInvalidToken, http.StatusUnauthorized)
+			wrapCtxWithError(c, apperror.NewUnauthorized("invalid token"))
 			span.End()
 			return
 		}
 
-		req := &tokenpb.ValidateTokenRequest{
-			Token: authToken,
-		}
-		resp, err := h.tokenSrv.ValidateToken(ctx, req)
-		if err != nil {
-			h.JSONError(c, cstmerr.ErrInvalidToken, http.StatusUnauthorized)
+		usrname, valid, err := h.srv.Auth.ValidateToken(ctx, authToken)
+		if err != nil || !valid {
+			wrapCtxWithError(c, err)
 			span.End()
 			return
 		}
 
-		username, valid := resp.Username, resp.Valid
-		if !valid || username == "" {
-			h.JSONError(c, cstmerr.ErrInvalidToken, http.StatusUnauthorized)
-			span.End()
-			return
-		}
-
-		h.lg.Debugw("auth success",
-			"authToken", authToken,
-			"username", username)
-		c.Set(string(ctxkeys.UsernameKey), username)
+		c.Set(string(CtxKeyUsername), usrname)
 
 		span.End()
 
@@ -82,7 +66,7 @@ func (h *Handler) TracingMiddleware() gin.HandlerFunc {
 		)
 
 		c.Request = c.Request.WithContext(ctx)
-
+		c.Request.Header.Set(HeaderRequestID, span.SpanContext().TraceID().String())
 		c.Next()
 	}
 }
@@ -168,9 +152,3 @@ func UnaryClientInterceptor(ctx context.Context, method string, req, reply inter
 	newCtx := metadata.NewOutgoingContext(ctx, md)
 	return invoker(newCtx, method, req, reply, cc, opts...)
 }
-
-// TODO
-// func RequestIDMiddleware() gin.HandlerFunc {
-// 	return func(c *gin.Context) {
-// 	}
-// }

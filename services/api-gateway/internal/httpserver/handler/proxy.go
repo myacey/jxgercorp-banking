@@ -6,7 +6,6 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/myacey/jxgercorp-banking/services/shared/ctxkeys"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -35,10 +34,10 @@ func (h *Handler) ProxyHandler(target string) gin.HandlerFunc {
 			return
 		}
 
-		username, exists := c.Get(string(ctxkeys.UsernameKey)) // move ctx username to HTTP Header
+		username, exists := c.Get(CtxKeyUsername) // move ctx username to HTTP Header
 		if exists {
 			if usernameStr, ok := username.(string); ok {
-				c.Request.Header.Set("X-User-Username", usernameStr) // set username when authentificated
+				c.Request.Header.Set(HeaderUsername, usernameStr) // set username when authentificated
 			}
 		}
 

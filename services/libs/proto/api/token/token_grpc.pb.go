@@ -5,12 +5,12 @@
 // source: token.proto
 
 // protoc \
-//     --proto_path=./shared/proto \
-//     --go_out=paths=source_relative:./token/internal/grpc/pb \
-//     --go-grpc_out=paths=source_relative:./token/internal/grpc/pb \
-//     ./shared/proto/token.proto
+//     --proto_path=./libs/proto/api/token \
+//     --go_out=paths=source_relative:./libs/proto/api/token \
+//     --go-grpc_out=paths=source_relative:./libs/proto/api/token \
+//     ./libs/proto/api/token/token.proto
 
-package tokenpb
+package token
 
 import (
 	context "context"

@@ -18,11 +18,11 @@ func ConfiurePostgres(config backconfig.Config) (*db.Queries, *sql.DB, error) {
 
 	conn, err := sql.Open("postgres", psqlInfo)
 	if err != nil {
-		return nil, nil, fmt.Errorf("canot open postgres conn:", err)
+		return nil, nil, fmt.Errorf("canot open postgres conn: %w", err)
 	}
 	err = conn.Ping()
 	if err != nil {
-		return nil, nil, fmt.Errorf("cannot ping postgres:", err)
+		return nil, nil, fmt.Errorf("cannot ping postgres: %w", err)
 	}
 
 	conn.SetMaxOpenConns(200)

@@ -2,77 +2,49 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
-	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/gin-gonic/gin"
-	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/handlers"
-	"github.com/myacey/jxgercorp-banking/services/shared/logging"
-	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
-	"github.com/myacey/jxgercorp-banking/services/shared/telemetry"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/config"
+	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/httpserver"
+	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
 )
 
+var cfgPath = flag.String("f", "./services/api-gateway/configs/config.yaml", "path to the api-gateway's config")
+
 func main() {
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	// Telemetry
 	tracer, metricExporter, err := telemetry.StartTracer("api-gateway", "0.0.1")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 	defer tracer.Shutdown(context.Background())
 	defer metricExporter.Shutdown(context.Background())
 
-	// metrics, err := telemetry.NewMetrics("api-gateway")
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	logger, err := logging.ConfigureLogger()
+	// Config
+	cfg, err := config.LoadConfig(*cfgPath)
 	if err != nil {
-		log.Fatal("cant configure logger:", err)
+		log.Fatal(err)
 	}
-	defer logger.Sync()
 
-	grpcConn, err := grpc.NewClient(
-		"localhost:50051",
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(handlers.UnaryClientInterceptor),
-	)
+	app, err := httpserver.New(cfg)
 	if err != nil {
-		logger.Fatal(err)
+		log.Fatal(err)
 	}
-	defer grpcConn.Close()
-	tokenServiceRPC := tokenpb.NewTokenServiceClient(grpcConn)
+	go func() {
+		<-ctx.Done()
+		app.Stop(ctx)
+	}()
 
-	handl := handlers.NewHandler(tokenServiceRPC, logger, tracer.Tracer("api-gateway"))
-
-	r := gin.Default()
-	// r.Use(handl.TracingMiddleware())
-	r.Use(handl.MetricsMiddleware())
-
-	public := r.Group("/api/v1")
-	{
-		// TODO: change addresses
-		public.Any("/user/register", handl.ProxyHandler("http://localhost:8081"))
-		public.Any("/user/login", handl.ProxyHandler("http://localhost:8081"))
-		public.Any("/user/confirm", handl.ProxyHandler("http://localhost:8081"))
+	if err := app.Start(ctx); err != nil {
+		log.Printf("http server returned error: %v", err)
 	}
-
-	protected := r.Group("/api/v1")
-	protected.Use(handl.AuthTokenMiddleware())
-	{
-		// TODO: change addresses
-		protected.Any("/user/balance", handl.ProxyHandler("http://localhost:8081"))
-		protected.Any("/transaction/create", handl.ProxyHandler("http://localhost:8082"))
-		// protected.Any("/transaction/search", handl.ProxyHandler("http://localhost:8082"))
-		protected.Match([]string{http.MethodOptions, http.MethodGet}, "/transaction/search", handl.ProxyHandler("http://localhost:8082"))
-	}
-
-	lg, err := logging.ConfigureLogger()
-	if err != nil {
-		log.Fatalf("cant initialize logger: %v", err)
-	}
-	lg.Info("API Gateway running on :80")
-	r.Run(":80")
 }

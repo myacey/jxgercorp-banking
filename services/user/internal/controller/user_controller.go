@@ -37,6 +37,8 @@ func (h *Controller) CreateUser(c *gin.Context) {
 		return
 	}
 
+	// h.metrics.RecordRegister(c.Request.Context(), attrs)
+
 	c.JSON(http.StatusCreated, gin.H{"message": "success"})
 }
 
