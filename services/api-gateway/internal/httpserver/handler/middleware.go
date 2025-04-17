@@ -1,4 +1,4 @@
-package handlers
+package handler
 
 import (
 	"context"
@@ -40,7 +40,7 @@ func (h *Handler) AuthTokenMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set(string(CtxKeyUsername), usrname)
+		c.Request.Header.Set(HeaderUsername, usrname)
 
 		span.End()
 

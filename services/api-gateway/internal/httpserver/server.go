@@ -7,7 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/config"
-	handlers "github.com/myacey/jxgercorp-banking/services/api-gateway/internal/httpserver/handler"
+	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/httpserver/handler"
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/service"
 	tokenpb "github.com/myacey/jxgercorp-banking/services/libs/proto/api/token"
 	"github.com/myacey/jxgercorp-banking/services/libs/web"
@@ -47,7 +47,7 @@ func (app *App) initialize(cfg config.AppConfig) error {
 	grpcConn, err := grpc.NewClient(
 		cfg.GrpcTarget,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(handlers.UnaryClientInterceptor),
+		grpc.WithUnaryInterceptor(handler.UnaryClientInterceptor),
 	)
 	if err != nil {
 		log.Fatal("failed to init grpc conn: %w", err)
@@ -58,7 +58,7 @@ func (app *App) initialize(cfg config.AppConfig) error {
 		Auth: *service.NewAuthService(tokenpb.NewTokenServiceClient(grpcConn)),
 	}
 
-	handl := handlers.NewHandler(*app.service)
+	handl := handler.NewHandler(*app.service)
 	app.router.Use(handl.MetricsMiddleware())
 	app.router.Use(handl.TracingMiddleware())
 

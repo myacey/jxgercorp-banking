@@ -13,7 +13,7 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
 )
 
-var cfgPath = flag.String("f", "./services/api-gateway/configs/config.yaml", "path to the api-gateway's config")
+var cfgPath = flag.String("f", "./configs/config.yaml", "path to the api-gateway's config")
 
 func main() {
 	flag.Parse()
