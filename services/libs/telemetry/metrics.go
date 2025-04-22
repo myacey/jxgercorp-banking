@@ -70,38 +70,3 @@ func (m *HTTPMetrics) RecordDuration(ctx context.Context, duration int64, attrs 
 func (m *HTTPMetrics) RecordError(ctx context.Context, attrs ...attribute.KeyValue) {
 	m.errorCounter.Add(ctx, 1, metric.WithAttributes(attrs...))
 }
-
-// Сustom metrics for user service
-type UserMetrics struct {
-	HTTPMetrics
-	registrations metric.Int64Counter
-
-	logins metric.Int64Counter
-}
-
-func (mf *MetricsFactory) NewUserMetrics() *UserMetrics {
-	regCounter, _ := mf.meter.Int64Counter(
-		"user.register.count",
-		metric.WithDescription("Number of successful registrations"),
-	)
-
-	loginCounter, _ := mf.meter.Int64Counter(
-		"user.login.counter",
-		metric.WithDescription("Number of successful logins"),
-	)
-
-	httpMetrics := mf.NewHTTPMetrics()
-	return &UserMetrics{
-		HTTPMetrics:   *httpMetrics,
-		registrations: regCounter,
-		logins:        loginCounter,
-	}
-}
-
-func (m *UserMetrics) RecordRegister(ctx context.Context, attrs ...attribute.KeyValue) {
-	m.registrations.Add(ctx, 1, metric.WithAttributes(attrs...))
-}
-
-func (m *UserMetrics) RecordLogin(ctx context.Context, attr ...attribute.KeyValue) {
-	m.logins.Add(ctx, 1, metric.WithAttributes(attr...))
-}

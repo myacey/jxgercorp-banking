@@ -1,0 +1,10 @@
+go 1.23.3
+
+use (
+    ./user
+    ./api-gateway
+    ./token
+    ./transaction
+    ./notification
+    ./libs
+)

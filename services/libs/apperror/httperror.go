@@ -23,3 +23,7 @@ func NewBadReq(msg string) error {
 func NewUnauthorized(msg string) error {
 	return HTTPError{Code: http.StatusUnauthorized, Message: msg}
 }
+
+func NewNotFound(msg string) error {
+	return HTTPError{Code: http.StatusNotFound, Message: msg}
+}

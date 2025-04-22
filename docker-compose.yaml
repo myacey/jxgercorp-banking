@@ -1,10 +1,11 @@
 services:
   # PSQL
-  postgres:
+  postgres-user:
     image: postgres:17-alpine
+    env_file: .env
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_PORT=${POSTGRES_PORT}
     command: > 
@@ -17,8 +18,8 @@ services:
       - "${POSTGRES_PORT}:5432"
     networks:
       - backend-net
-    volumes:
-      - ./services/db/data/:/var/lib/postgresql/data
+    # volumes:
+      # - ./services/db/data/:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
       interval: 5s
@@ -35,21 +36,22 @@ services:
           memory: 1G
 
   # REDIS
-  redis:
+  redis-user:
     image: redis:alpine
+    env_file: .env
     environment:
-      - REDIS_PASSWORD=${DB_PASSWORD}
-      - REDIS_USER_PASSWORD=${DB_PASSWORD}
-      - REDIS_DATABASE=0
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_USER_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DATABASE=${REDIS_INDEX}
     command: >
       sh -c '
         mkdir -p /usr/local/etc/redis &&
         echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
-        echo "requirepass $DB_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
+        echo "requirepass ${REDIS_PASSWORD}" >> /usr/local/etc/redis/redis.conf &&
         echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
         echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
         echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
-        echo "user $REDIS_USER on >$DB_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        echo "user ${REDIS_USER} on >${REDIS_PASSWORD} ~* +@all" >> /usr/local/etc/redis/users.acl &&
         redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
       '
     ports:
@@ -57,21 +59,22 @@ services:
     networks:
       - backend-net
     depends_on:
-      postgres:
+      postgres-user:
         condition: service_healthy
   
   # MIGRATIONS
   migrate:
       image: migrate/migrate
+      env_file: .env
       networks:
           - backend-net
       volumes:
-          - ./services/db/migration/:/migrations
-      command: ["-path", "/migrations", "-database", "postgresql://${POSTGRES_USER}:${DB_PASSWORD:-invalid}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable", "up"]
+          - ./services/user/db/migrations/:/migrations/user/
+      command: ["-path", "/migrations/user", "-database", "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD:-invalid}@postgres-user:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable", "up"]
       links:
-        - postgres
+        - postgres-user
       depends_on:
-        postgres:
+        postgres-user:
           condition: service_healthy
 
   # KAFKA

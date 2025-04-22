@@ -1,0 +1,23 @@
+version: "2"
+sql:
+- engine: "postgresql" 
+  queries: "./sqlc/"
+  schema: "./migrations/"
+  gen:
+    go:
+      package: "db"
+      out: "../internal/repository/sqlc"
+      emit_interface: true
+      emit_empty_slices: true
+      overrides:
+      - db_type: "timestamptz"
+        go_type: "time.Time"
+
+      - db_type: "user_status_enum"
+        go_type: "github.com/myacey/jxgercorp-banking/services/user/internal/models/entity.UserStatus"
+        go_struct_tag: json:"status"
+
+      - db_type: "uuid"
+        go_type:
+            import: "github.com/google/uuid"
+            type: "UUID"

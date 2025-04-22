@@ -25,7 +25,7 @@ sqlc:
 # 	docker run --name redis -p 6379:6379 -d redis:7-alpine
 
 new_migration:
-	migrate create -ext sql -dir services/db/migration -seq $(name)
+	migrate create -ext sql -dir $(dir) -seq $(name)
 # make new_migration name=<some name>
 
 .PHONY: postgres createdb dropdb migrateup migratedown sqlc up redis new_migration
