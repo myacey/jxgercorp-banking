@@ -3,13 +3,10 @@ package httpserver
 import (
 	"context"
 	"database/sql"
-	"log"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/myacey/jxgercorp-banking/services/libs/web"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/config"
@@ -28,9 +25,15 @@ type App struct {
 	service *service.Service
 }
 
-func New(cfg config.AppConfig, conn *sql.DB, queries *db.Queries, store *redis.Client) (*App, error) {
+func New(
+	cfg config.AppConfig,
+	conn *sql.DB,
+	queries *db.Queries,
+	store *redis.Client,
+	grpcClient *grpcclient.ClientImpl,
+) (*App, error) {
 	app := &App{}
-	err := app.initialize(cfg, conn, queries, store)
+	err := app.initialize(cfg, conn, queries, store, grpcClient)
 	if err != nil {
 		return nil, err
 	}
@@ -47,24 +50,20 @@ func (app *App) Stop(ctx context.Context) error {
 	return app.server.Shutdown(ctx)
 }
 
-func (app *App) initialize(cfg config.AppConfig, conn *sql.DB, queries *db.Queries, store *redis.Client) error {
-	grpcConn, err := grpc.NewClient(
-		cfg.GrpcTarget,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	)
-	if err != nil {
-		log.Fatal("failed to init grpc conn: %w", err)
-	}
-	defer grpcConn.Close()
-	grpcClientService := grpcclient.New(grpcConn)
-
+func (app *App) initialize(
+	cfg config.AppConfig,
+	conn *sql.DB,
+	queries *db.Queries,
+	store *redis.Client,
+	grpcClient *grpcclient.ClientImpl,
+) error {
 	usrRepo := userrepo.NewUserRepo(queries)
 	confirmRepo := confirmationrepo.NewConfirmationCodesRepo(store)
 
 	confirmSrv := service.NewConfirmationService(confirmRepo, cfg.KafkaCfg)
 	hasherSrv := hasher.NewBcrypt()
 	app.service = &service.Service{
-		User: *service.NewUserSrv(usrRepo, *confirmSrv, grpcClientService, hasherSrv),
+		User: *service.NewUserSrv(usrRepo, *confirmSrv, grpcClient, hasherSrv),
 	}
 
 	handlr := handler.NewHandler(&app.service.User)
@@ -84,8 +83,6 @@ func (app *App) initialize(cfg config.AppConfig, conn *sql.DB, queries *db.Queri
 	app.router.POST("/api/v1/user/register", handlr.CreateUser)
 	app.router.POST("/api/v1/user/login", handlr.Login)
 	app.router.POST("/api/v1/user/confirm", handlr.ConfirmUserEmail)
-
-	// app.router.GET("/api/v1/user/balance", handlr.)
 
 	return nil
 }

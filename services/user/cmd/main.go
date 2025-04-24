@@ -13,6 +13,7 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/config"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/httpserver"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/grpcclient"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/repository"
 )
 
@@ -43,7 +44,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// Tracer for Telemetry (Jaeger)
+	// tracer for Telemetry (Jaeger)
 	_, _, err = telemetry.StartTracer("user-microservice", "0.0.1")
 	if err != nil {
 		log.Fatal(err)
@@ -51,7 +52,13 @@ func main() {
 	_ = telemetry.NewMetricsFactory("user-microservice")
 	// userMetrics := metricsFactory.NewUserMetrics()
 
-	app, err := httpserver.New(cfg, conn, psqlQueries, rdb)
+	grpcConn, err := grpcclient.MustInitConnection(cfg.GrpcConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer grpcConn.Close()
+
+	app, err := httpserver.New(cfg, conn, psqlQueries, rdb, grpcclient.New(grpcConn))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,6 +66,7 @@ func main() {
 	go func() {
 		<-ctx.Done()
 		app.Stop(ctx)
+		grpcConn.Close()
 		// tp.Shutdown(ctx)
 	}()
 

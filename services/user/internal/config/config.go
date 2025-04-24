@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/myacey/jxgercorp-banking/services/libs/web"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/grpcclient"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/repository"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/service"
 )
@@ -17,7 +18,7 @@ type AppConfig struct {
 	RedisCfg    repository.RedisConfig    `mapstructure:"redis"`
 
 	KafkaCfg      service.ConfirmationKafkaConfig `mapstructure:"kafka"`
-	GrpcTarget    string                          `mapstructure:"grpc_target"`
+	GrpcConfig    grpcclient.Config               `mapstructure:"grpcserver"`
 	HTTPServerCfg web.ServerConfig                `mapstructure:"httpserver"`
 }
 
