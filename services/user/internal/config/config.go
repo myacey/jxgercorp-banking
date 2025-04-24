@@ -32,17 +32,8 @@ func LoadConfig(cfgPath string) (config AppConfig, err error) {
 		return
 	}
 
-	config.PostgresCfg.Password = os.Getenv("POSTGRES_PASSWORD")
-	config.RedisCfg.Password = os.Getenv("REDIS_PASSWORD")
-
-	// viper.SetConfigFile(".env")
-	// viper.ReadInConfig()
-	// viper.AutomaticEnv()
-
-	// viper.SetConfigFile(cfgPath)
-	// viper.MergeInConfig()
-
-	// viper.Unmarshal(&config)
+	config.PostgresCfg.Password = os.Getenv("TRANSFER_POSTGRES_PASSWORD")
+	config.RedisCfg.Password = os.Getenv("USER_REDIS_PASSWORD")
 
 	log.Println("config:", config)
 

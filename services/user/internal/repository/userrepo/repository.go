@@ -22,20 +22,20 @@ var (
 	ErrUserNotFound         = errors.New("user not found")
 )
 
-type PostgresUserRepository struct {
+type PostgresUser struct {
 	store *db.Queries
 
 	tracer trace.Tracer
 }
 
-func NewUserRepo(queries *db.Queries) *PostgresUserRepository {
-	return &PostgresUserRepository{
+func NewUserRepo(queries *db.Queries) *PostgresUser {
+	return &PostgresUser{
 		store:  queries,
 		tracer: otel.Tracer("repository-user"),
 	}
 }
 
-func (r *PostgresUserRepository) CreateUser(ctx context.Context, req *request.Register) (*entity.User, error) {
+func (r *PostgresUser) CreateUser(ctx context.Context, req *request.Register) (*entity.User, error) {
 	ctx, span := r.tracer.Start(ctx, "repository: CreateUser")
 	span.SetAttributes(
 		attribute.String("db.operation", "CreateUser"),
@@ -60,14 +60,14 @@ func (r *PostgresUserRepository) CreateUser(ctx context.Context, req *request.Re
 	return &entity.User{
 		ID:             dbUser.ID,
 		Username:       dbUser.Username,
-		Email:          dbUser.Username,
+		Email:          dbUser.Email,
 		HashedPassword: dbUser.HashedPassword,
 		CreatedAt:      dbUser.CreatedAt,
 		Status:         dbUser.Status,
 	}, nil
 }
 
-func (r *PostgresUserRepository) GetUserByID(ctx context.Context, req *request.GetUserByID) (*entity.User, error) {
+func (r *PostgresUser) GetUserByID(ctx context.Context, req *request.GetUserByID) (*entity.User, error) {
 	ctx, span := r.tracer.Start(ctx, "repository: CreateUser")
 	span.SetAttributes(
 		attribute.String("db.operation", "GetUserByID"),
@@ -97,7 +97,7 @@ func (r *PostgresUserRepository) GetUserByID(ctx context.Context, req *request.G
 	}, nil
 }
 
-func (r *PostgresUserRepository) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
+func (r *PostgresUser) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
 	ctx, span := r.tracer.Start(ctx, "repository: GetUserByUsername")
 	span.SetAttributes(
 		attribute.String("db.operation", "GetUserByUsername"),
@@ -127,7 +127,7 @@ func (r *PostgresUserRepository) GetUserByUsername(ctx context.Context, username
 	}, nil
 }
 
-func (r *PostgresUserRepository) DeleteUserByUsername(ctx context.Context, username string) error {
+func (r *PostgresUser) DeleteUserByUsername(ctx context.Context, username string) error {
 	ctx, span := r.tracer.Start(ctx, "repository: DeleteUserByUsername")
 	span.SetAttributes(
 		attribute.String("db.operation", "DeleteUserByUsername"),
@@ -151,7 +151,7 @@ func (r *PostgresUserRepository) DeleteUserByUsername(ctx context.Context, usern
 	return nil
 }
 
-func (r *PostgresUserRepository) UpdateUserInfo(ctx context.Context, req *request.UpdateUserInfo, username string) (*entity.User, error) {
+func (r *PostgresUser) UpdateUserInfo(ctx context.Context, req *request.UpdateUserInfo, username string) (*entity.User, error) {
 	ctx, span := r.tracer.Start(ctx, "repository: UpdateUserInfo")
 	span.SetAttributes(
 		attribute.String("db.operation", "UpdateUserInfo"),
@@ -186,7 +186,7 @@ func (r *PostgresUserRepository) UpdateUserInfo(ctx context.Context, req *reques
 	}, nil
 }
 
-func (r *PostgresUserRepository) UpdateUserStatus(ctx context.Context, newStatus entity.UserStatus, username string) (*entity.User, error) {
+func (r *PostgresUser) UpdateUserStatus(ctx context.Context, newStatus entity.UserStatus, username string) (*entity.User, error) {
 	ctx, span := r.tracer.Start(ctx, "repository: UpdateUserStatus")
 	span.SetAttributes(
 		attribute.String("db.operation", "UpdateUserStatus"),

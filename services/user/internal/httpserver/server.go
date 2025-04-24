@@ -29,17 +29,13 @@ type App struct {
 }
 
 func New(cfg config.AppConfig, conn *sql.DB, queries *db.Queries, store *redis.Client) (*App, error) {
-	app := &App{
-		router: gin.Default(),
-	}
+	app := &App{}
 	err := app.initialize(cfg, conn, queries, store)
-
-	app.server = web.NewServer(cfg.HTTPServerCfg, app.router)
-
 	if err != nil {
 		return nil, err
 	}
 
+	app.server = web.NewServer(cfg.HTTPServerCfg, app.router)
 	return app, nil
 }
 
@@ -77,7 +73,7 @@ func (app *App) initialize(cfg config.AppConfig, conn *sql.DB, queries *db.Queri
 	app.router.ContextWithFallback = true
 	app.router.Use(handlr.TracingMiddleware())
 
-	// add CORS hui
+	// add CORS
 	app.router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:8080"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},

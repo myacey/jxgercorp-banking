@@ -12,17 +12,17 @@ import (
 
 var ErrInvalidCode = errors.New("invalid code")
 
-type RedisConfirmationCodesRepostory struct {
+type RedisConfirmationCodes struct {
 	store *redis.Client
 
 	tracer trace.Tracer
 }
 
-func NewConfirmationCodesRepo(store *redis.Client) *RedisConfirmationCodesRepostory {
-	return &RedisConfirmationCodesRepostory{store, otel.Tracer("repository-confirmation")}
+func NewConfirmationCodesRepo(store *redis.Client) *RedisConfirmationCodes {
+	return &RedisConfirmationCodes{store, otel.Tracer("repository-confirmation")}
 }
 
-func (cc *RedisConfirmationCodesRepostory) CreateCode(ctx context.Context, username, code string) error {
+func (cc *RedisConfirmationCodes) CreateCode(ctx context.Context, username, code string) error {
 	ctx, span := cc.tracer.Start(ctx, "confirmation-repository: CreateCode")
 	defer span.End()
 
@@ -34,7 +34,7 @@ func (cc *RedisConfirmationCodesRepostory) CreateCode(ctx context.Context, usern
 	return nil
 }
 
-func (cc *RedisConfirmationCodesRepostory) GetCode(ctx context.Context, username string) (string, error) {
+func (cc *RedisConfirmationCodes) GetCode(ctx context.Context, username string) (string, error) {
 	ctx, span := cc.tracer.Start(ctx, "confirmation-repository: GetCode")
 	defer span.End()
 

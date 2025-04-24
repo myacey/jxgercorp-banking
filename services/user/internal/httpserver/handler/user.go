@@ -18,11 +18,11 @@ const (
 func (h *Handler) CreateUser(c *gin.Context) {
 	var req request.Register
 	if err := c.ShouldBindJSON(&req); err != nil {
-		wrapCtxWithError(c, err)
+		wrapCtxWithError(c, apperror.NewBadReq("invalid req: "+err.Error()))
 		return
 	}
 
-	_, err := h.userSrv.CreateUser(c, &req)
+	usr, err := h.userSrv.CreateUser(c, &req)
 	if err != nil {
 		wrapCtxWithError(c, err)
 		return
@@ -30,7 +30,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 
 	// h.metrics.RecordRegister(c.Request.Context(), attrs)
 
-	c.JSON(http.StatusCreated, gin.H{"message": "success"})
+	c.JSON(http.StatusCreated, usr.ToResponse())
 }
 
 // Login checks user data with existing in db and sends auth token
@@ -41,7 +41,7 @@ func (h *Handler) Login(c *gin.Context) {
 
 	var req request.Login
 	if err := c.ShouldBindJSON(&req); err != nil {
-		wrapCtxWithError(c, err)
+		wrapCtxWithError(c, apperror.NewBadReq("invalid req: "+err.Error()))
 		return
 	}
 
@@ -52,7 +52,7 @@ func (h *Handler) Login(c *gin.Context) {
 	}
 
 	c.SetCookie(CookieAuth, token, secondsPerDay, "/", "localhost", false, false)
-	c.JSON(http.StatusOK, gin.H{"message": "success"})
+	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
 func (h *Handler) ConfirmUserEmail(c *gin.Context) {
@@ -62,7 +62,7 @@ func (h *Handler) ConfirmUserEmail(c *gin.Context) {
 
 	var req request.ConfirmUserEmail
 	if err := c.ShouldBindJSON(&req); err != nil {
-		wrapCtxWithError(c, err)
+		wrapCtxWithError(c, apperror.NewBadReq("invalid req: "+err.Error()))
 		return
 	}
 
@@ -82,7 +82,7 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 
 	var req request.GetUserByID
 	if err := c.ShouldBindJSON(&req); err != nil {
-		wrapCtxWithError(c, err)
+		wrapCtxWithError(c, apperror.NewBadReq("invalid req: "+err.Error()))
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &usr)
+	c.JSON(http.StatusOK, usr.ToResponse())
 }
 
 func (h *Handler) GetUserByUsername(c *gin.Context) {
@@ -102,7 +102,7 @@ func (h *Handler) GetUserByUsername(c *gin.Context) {
 
 	var req request.GetUserByUsername
 	if err := c.ShouldBindJSON(&req); err != nil {
-		wrapCtxWithError(c, err)
+		wrapCtxWithError(c, apperror.NewBadReq("invalid req: "+err.Error()))
 		return
 	}
 
@@ -112,7 +112,7 @@ func (h *Handler) GetUserByUsername(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &usr)
+	c.JSON(http.StatusOK, usr.ToResponse())
 }
 
 func (h *Handler) DeleteUserByUsername(c *gin.Context) {
@@ -145,17 +145,17 @@ func (h *Handler) UpdateUserInfo(c *gin.Context) {
 
 	var req request.UpdateUserInfo
 	if err := c.ShouldBindJSON(&req); err != nil {
-		wrapCtxWithError(c, err)
+		wrapCtxWithError(c, apperror.NewBadReq("invalid req: "+err.Error()))
 		return
 	}
 
 	username := c.GetHeader(HeaderUsername)
 
-	_, err := h.userSrv.UpdateUserInfo(c, &req, username)
+	usr, err := h.userSrv.UpdateUserInfo(c, &req, username)
 	if err != nil {
 		wrapCtxWithError(c, err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "success"})
+	c.JSON(http.StatusOK, usr)
 }

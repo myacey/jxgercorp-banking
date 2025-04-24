@@ -75,11 +75,11 @@ func (cs *Confirmation) generateAccountConfirmation(c context.Context, username,
 		kafka.Message{Value: msgMarshalled},
 	)
 	if err != nil {
-		return apperror.NewInternal("failed to craete confirm code", err)
+		return apperror.NewInternal("failed to create confirm code", err)
 	}
 
 	if err = conn.Close(); err != nil {
-		return apperror.NewInternal("failed to craete confirm code", err)
+		return apperror.NewInternal("failed to create confirm code", err)
 	}
 	return nil
 }

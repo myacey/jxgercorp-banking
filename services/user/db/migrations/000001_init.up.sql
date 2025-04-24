@@ -6,7 +6,7 @@ CREATE TABLE "users" (
     "email" varchar(50) UNIQUE NOT NULL,
     "hashed_password" varchar NOT NULL,
     "created_at" timestamptz NOT NULL DEFAULT (now()),
-    "status" user_status_enum NOT NULL DEFAULT('pending')
+    "status" user_status_enum NOT NULL DEFAULT('active')
 );
 
 CREATE INDEX ON "users" ("username");

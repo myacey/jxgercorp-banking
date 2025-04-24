@@ -55,7 +55,7 @@ func wrapCtxWithError(ctx *gin.Context, err error) {
 		})
 
 		if httpError.Code == http.StatusInternalServerError {
-			log.Printf("internal error: %v | %v", httpError.Message, httpError.DebugError)
+			log.Printf("internal error. responseID: %v; user message: %v; debug message: %v", ctx.GetHeader(HeaderRequestID), httpError.Message, httpError.DebugError)
 		}
 	} else {
 		ctx.JSON(http.StatusInternalServerError, response.Error{

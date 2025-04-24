@@ -16,7 +16,7 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/user/internal/repository"
 )
 
-var cfgPath = flag.String("f", "./configs/config.yaml", "path to the api-gateway's config")
+var cfgPath = flag.String("f", "./configs/config.yaml", "path to the user service config")
 
 func main() {
 	flag.Parse()
@@ -27,7 +27,7 @@ func main() {
 	// config
 	cfg, err := config.LoadConfig(*cfgPath)
 	if err != nil {
-		log.Fatal("cannot load config:", err)
+		log.Fatal("cannot load config: ", err)
 	}
 
 	// postgres

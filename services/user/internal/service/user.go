@@ -134,7 +134,7 @@ func (s *User) Login(ctx context.Context, req *request.Login) (string, error) {
 
 	token, err := s.tokenSrv.GenerateToken(ctx, req.Username, tokenTTL)
 	if err != nil || token == "" {
-		return "", apperror.NewUnauthorized("failed to login")
+		return "", apperror.NewInternal("failed to login", err)
 	}
 
 	return token, nil

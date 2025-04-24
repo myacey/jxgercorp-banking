@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/models/dto/response"
 )
 
 type UserUnhashed struct {
@@ -37,4 +38,14 @@ type User struct {
 	HashedPassword string
 	CreatedAt      time.Time
 	Status         UserStatus
+}
+
+func (u *User) ToResponse() *response.User {
+	return &response.User{
+		ID:        u.ID,
+		Username:  u.Username,
+		Email:     u.Email,
+		CreatedAt: u.CreatedAt,
+		Status:    string(u.Status),
+	}
 }
