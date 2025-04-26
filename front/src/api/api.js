@@ -28,9 +28,9 @@ export const loginUser = async (userData) => {
     }
 };
 
-export const fetchTransactions = async (data) => {
+export const fetchTransfers = async (data) => {
     try {
-        const response = await apiClient.get('v1/transaction/search', {
+        const response = await apiClient.get('v1/transfer/search', {
             params: data,
             withCredentials: true,
         });
@@ -54,9 +54,9 @@ export const getUserBalance = async () => {
     }
 };
 
-export const createTransaction = async (createTrxData) => {
+export const createTransfer = async (createTrxData) => {
     try {
-        const response = await apiClient.post('v1/transaction/create', createTrxData, {
+        const response = await apiClient.post('v1/transfer/create', createTrxData, {
             withCredentials: true,
         });
         console.log('create trx response:', response)
@@ -69,7 +69,7 @@ export const createTransaction = async (createTrxData) => {
 
 // export const searchEntries = async (trxSearchData) => {
 //     try {
-//         const response = await apiClient.get('v1/transaction/', trxSearchData, {
+//         const response = await apiClient.get('v1/transfer/', trxSearchData, {
 //             withCredentials: true,
 //         });
 //         console.log('search trx response:', response);

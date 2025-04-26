@@ -2,17 +2,14 @@ package httpserver
 
 import (
 	"context"
-	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/config"
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/httpserver/handler"
+	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/pkg/grpcclient"
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/service"
-	tokenpb "github.com/myacey/jxgercorp-banking/services/libs/proto/api/token"
 	"github.com/myacey/jxgercorp-banking/services/libs/web"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type App struct {
@@ -21,13 +18,13 @@ type App struct {
 	service *service.Service
 }
 
-func New(cfg config.AppConfig) (*App, error) {
+func New(cfg config.AppConfig, grpcClient *grpcclient.ClientImpl) (*App, error) {
 	app := &App{
 		router: gin.Default(),
 	}
 	app.server = web.NewServer(cfg.HTTPServerCfg, app.router)
 
-	err := app.initialize(cfg)
+	err := app.initialize(cfg, grpcClient)
 	if err != nil {
 		return nil, err
 	}
@@ -43,19 +40,9 @@ func (app *App) Stop(ctx context.Context) error {
 	return app.server.Shutdown(ctx)
 }
 
-func (app *App) initialize(cfg config.AppConfig) error {
-	grpcConn, err := grpc.NewClient(
-		cfg.GrpcTarget,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithUnaryInterceptor(handler.UnaryClientInterceptor),
-	)
-	if err != nil {
-		log.Fatal("failed to init grpc conn: %w", err)
-	}
-	defer grpcConn.Close()
-
+func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientImpl) error {
 	app.service = &service.Service{
-		Auth: *service.NewAuthService(tokenpb.NewTokenServiceClient(grpcConn)),
+		Auth: *service.NewAuthService(grpcClient),
 	}
 
 	handl := handler.NewHandler(*app.service)
@@ -74,10 +61,22 @@ func (app *App) initialize(cfg config.AppConfig) error {
 	protected.Use(handl.AuthTokenMiddleware())
 	{
 		// TODO: change addresses
-		protected.Any("/user/balance", handl.ProxyHandler("http://localhost:8081"))
-		protected.Any("/transaction/create", handl.ProxyHandler("http://localhost:8082"))
-		// protected.Any("/transaction/search", handl.ProxyHandler("http://localhost:8082"))
-		protected.Match([]string{http.MethodOptions, http.MethodGet}, "/transaction/search", handl.ProxyHandler("http://localhost:8082"))
+		// protected.Any("/transfer/account", handl.ProxyHandler("http://localhost:8082"))
+		protected.Match(
+			[]string{http.MethodOptions, http.MethodGet, http.MethodPost},
+			"/transfer/account",
+			handl.ProxyHandler("http://localhost:8082"),
+		)
+
+		protected.Match(
+			[]string{http.MethodOptions, http.MethodGet, http.MethodPost},
+			"/transfer",
+			handl.ProxyHandler("http://localhost:8082"),
+		)
+
+		// protected.Any("/transfer/create", handl.ProxyHandler("http://localhost:8082"))
+		// protected.Any("/transfer/search", handl.ProxyHandler("http://localhost:8082"))
+		// protected.Match([]string{http.MethodOptions, http.MethodGet}, "/transfer/search", handl.ProxyHandler("http://localhost:8082"))
 	}
 
 	return nil

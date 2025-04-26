@@ -18,7 +18,7 @@ type AppConfig struct {
 	RedisCfg    repository.RedisConfig    `mapstructure:"redis"`
 
 	KafkaCfg      service.ConfirmationKafkaConfig `mapstructure:"kafka"`
-	GrpcConfig    grpcclient.Config               `mapstructure:"grpcserver"`
+	GrpcConfig    grpcclient.Config               `mapstructure:"grpcclient"`
 	HTTPServerCfg web.ServerConfig                `mapstructure:"httpserver"`
 }
 

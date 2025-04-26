@@ -7,18 +7,17 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/types/known/timestamppb"
 
 	tokenpb "github.com/myacey/jxgercorp-banking/services/libs/proto/api/token"
 )
 
 type Config struct {
-	ListenAddr string `mapstructure:"listen"`
+	Target string `mapstructure:"target"`
 }
 
 func MustInitConnection(cfg Config) (*grpc.ClientConn, error) {
 	grpcConn, err := grpc.NewClient(
-		cfg.ListenAddr,
+		cfg.Target,
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to init grpc conn: %v", err)
@@ -40,7 +39,6 @@ func New(conn *grpc.ClientConn) *ClientImpl {
 func (c *ClientImpl) GenerateToken(ctx context.Context, username string, ttl time.Duration) (string, error) {
 	resp, err := c.cli.GenerateToken(ctx, &tokenpb.GenerateTokenRequest{
 		Username: username,
-		Ttl:      timestamppb.New(time.Now().Add(ttl)),
 	})
 	if err != nil {
 		return "", err

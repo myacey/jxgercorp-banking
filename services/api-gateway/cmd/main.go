@@ -10,6 +10,7 @@ import (
 
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/config"
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/httpserver"
+	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/pkg/grpcclient"
 	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
 )
 
@@ -35,7 +36,14 @@ func main() {
 		log.Fatal(err)
 	}
 
-	app, err := httpserver.New(cfg)
+	// grpc client
+	grpcConn, err := grpcclient.MustInitConnection(cfg.GrpcCfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer grpcConn.Close()
+
+	app, err := httpserver.New(cfg, grpcclient.New(grpcConn))
 	if err != nil {
 		log.Fatal(err)
 	}

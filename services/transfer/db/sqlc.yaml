@@ -1,0 +1,23 @@
+version: "2"
+sql:
+- engine: "postgresql" 
+  queries: "./sqlc/"
+  schema: "./migrations/"
+  gen:
+    go:
+      package: "db"
+      out: "../internal/repository/sqlc"
+      emit_interface: true
+      emit_empty_slices: true
+      sql_package: "pgx/v5"
+      overrides:
+      - db_type: "timestamptz"
+        go_type: "time.Time"
+
+      - db_type: "currency_enum"
+        go_type: "github.com/myacey/jxgercorp-banking/services/transfer/internal/models/entity.Currency"
+
+      - db_type: "uuid"
+        go_type:
+            import: "github.com/google/uuid"
+            type: "UUID"

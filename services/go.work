@@ -4,7 +4,7 @@ use (
     ./user
     ./api-gateway
     ./token
-    ./transaction
+    ./transfer
     ./notification
     ./libs
 )

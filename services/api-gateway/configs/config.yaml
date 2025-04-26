@@ -1,3 +1,5 @@
-grpc_target: "localhost:50051"
+grpcclient:
+  target: "localhost:50051"
+
 httpserver:
   listen: ":80"

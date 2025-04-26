@@ -12,7 +12,7 @@ import (
 
 var address = map[string]string{
 	"http://localhost:8081": "user-service",
-	"http://localhost:8082": "transaction-service",
+	"http://localhost:8082": "transfer-service",
 }
 
 func (h *Handler) ProxyHandler(target string) gin.HandlerFunc {

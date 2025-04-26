@@ -1,0 +1,2 @@
+grpcserver:
+  listen: ":50051"

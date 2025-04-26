@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	HeaderRequestID = "X-Request-Id"
-	HeaderUsername  = "X-User-Username"
+	HeaderRequestID     = "X-Request-Id"
+	HeaderUsername      = "X-User-Username"
+	HeaderAuthorization = "Authorization"
 
 	CtxKeyRetryAfter = "Retry-After"
 	CtxKeyUsername   = "Username"

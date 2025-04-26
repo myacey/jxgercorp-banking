@@ -1,13 +1,11 @@
 services:
-  # PSQL
+  # PSQL-USER
   postgres-user:
     image: postgres:17-alpine
-    env_file: .env
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_USER=${USER_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${USER_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${USER_POSTGRES_DB}
     command: > 
       -c 'max_connections=600'
       && -c 'shared_buffers=120MB'
@@ -15,43 +13,61 @@ services:
       && -c 'tcp_keepalives_interval = 10'
       && -c 'tcp_keepalives_count = 5'
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${USER_POSTGRES_PORT}:5432"
     networks:
       - backend-net
     # volumes:
       # - ./services/db/data/:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}'"]
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${USER_POSTGRES_USER} -d ${USER_POSTGRES_DB}'"]
       interval: 5s
       timeout: 10s
       retries: 5
       start_period: 10s
-    deploy:
-      resources:
-        limits:
-          cpus: "8.0"
-          memory: 6G
-        reservations:
-          cpus: "4.0"
-          memory: 1G
 
-  # REDIS
+  # PSQL-TRANSFER
+  postgres-transfer:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=${TRANSFER_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${TRANSFER_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${TRANSFER_POSTGRES_DB}
+    command: > 
+      -c 'max_connections=600'
+      && -c 'shared_buffers=120MB'
+      && -c 'tcp_keepalives_idle = 30'
+      && -c 'tcp_keepalives_interval = 10'
+      && -c 'tcp_keepalives_count = 5'
+    ports:
+      - "${TRANSFER_POSTGRES_PORT}:5432"
+    networks:
+      - backend-net
+    # volumes:
+      # - ./services/db/data/:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${TRANSFER_POSTGRES_USER} -d ${TRANSFER_POSTGRES_DB}'"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
+  # REDIS-USER
   redis-user:
     image: redis:alpine
     env_file: .env
     environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_USER_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_DATABASE=${REDIS_INDEX}
+      - REDIS_PASSWORD=${USER_REDIS_PASSWORD}
+      - REDIS_USER_PASSWORD=${USER_REDIS_PASSWORD}
+      - REDIS_DATABASE=${USER_REDIS_INDEX}
     command: >
       sh -c '
         mkdir -p /usr/local/etc/redis &&
         echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
-        echo "requirepass ${REDIS_PASSWORD}" >> /usr/local/etc/redis/redis.conf &&
+        echo "requirepass ${USER_REDIS_PASSWORD}" >> /usr/local/etc/redis/redis.conf &&
         echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
         echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
         echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
-        echo "user ${REDIS_USER} on >${REDIS_PASSWORD} ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        echo "user ${USER_REDIS_USER} on >${USER_REDIS_PASSWORD} ~* +@all" >> /usr/local/etc/redis/users.acl &&
         redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
       '
     ports:
@@ -64,18 +80,35 @@ services:
   
   # MIGRATIONS
   migrate:
-      image: migrate/migrate
-      env_file: .env
-      networks:
-          - backend-net
-      volumes:
-          - ./services/user/db/migrations/:/migrations/user/
-      command: ["-path", "/migrations/user", "-database", "postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD:-invalid}@postgres-user:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable", "up"]
-      links:
-        - postgres-user
-      depends_on:
-        postgres-user:
-          condition: service_healthy
+    image: migrate/migrate
+    env_file: .env
+    networks:
+      - backend-net
+    volumes:
+      - ./services/user/db/migrations/:/migrations/user/
+      - ./services/transfer/db/migrations/:/migrations/transfer/
+    entrypoint: ["/bin/sh"]
+    command:
+      - "-c"
+      - |
+        set -e
+
+        # first migrate the "user" database
+        migrate \
+          -path /migrations/user \
+          -database "postgresql://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD:-invalid}@postgres-user:5432/${USER_POSTGRES_DB}?sslmode=disable" \
+          up
+
+        # then migrate the "transfer" database
+        migrate \
+          -path /migrations/transfer \
+          -database "postgresql://${TRANSFER_POSTGRES_USER}:${TRANSFER_POSTGRES_PASSWORD:-invalid}@postgres-transfer:5432/${TRANSFER_POSTGRES_DB}?sslmode=disable" \
+          up
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      postgres-transfer:
+        condition: service_healthy
 
   # KAFKA
   kafka:

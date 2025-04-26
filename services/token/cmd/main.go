@@ -2,63 +2,49 @@ package main
 
 import (
 	"context"
-	"net"
+	"flag"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/myacey/jxgercorp-banking/services/shared/backconfig"
-	"github.com/myacey/jxgercorp-banking/services/shared/logging"
-	tokenpb "github.com/myacey/jxgercorp-banking/services/shared/proto/token"
-	"github.com/myacey/jxgercorp-banking/services/shared/telemetry"
-	"github.com/myacey/jxgercorp-banking/services/token/internal/repository/redisrepo"
+	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
+	"github.com/myacey/jxgercorp-banking/services/token/internal/config"
+	"github.com/myacey/jxgercorp-banking/services/token/internal/pkg/grpcserver"
 	"github.com/myacey/jxgercorp-banking/services/token/internal/service"
-	"github.com/myacey/jxgercorp-banking/services/token/internal/tokenmaker"
-	"google.golang.org/grpc"
 )
 
+var cfgPath = flag.String("f", "./configs/config.yaml", "path to the user service config")
+
 func main() {
-	// Telemetry
-	tracer, _, err := telemetry.StartTracer("token-service", "0.0.1")
-	if err != nil {
-		panic(err)
-	}
-	defer tracer.Shutdown(context.Background())
+	flag.Parse()
 
-	// logger
-	lg, err := logging.ConfigureLogger()
-	if err != nil {
-		panic(err)
-	}
-
-	// token maker
-	tokenMaker, err := tokenmaker.NewPaseto("sYHS6QnCtR2KxyJkPR4mKubZh2HLuJQF")
-	if err != nil {
-		panic(err)
-	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	// config
-	config, err := backconfig.LoadConfig(".")
+	cfg, err := config.LoadConfig(*cfgPath)
 	if err != nil {
-		panic(err)
+		log.Fatalf("cannot load config: %v", err)
 	}
 
-	// redis
-	rdb, err := redisrepo.ConfigureRedisClient(&config)
+	// Telemetry
+	tracer, _, err := telemetry.StartTracer("token-microservice", "0.0.1")
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to start tracer: %v", err)
 	}
-	tokenRepo := redisrepo.NewRedisTokenRepo(rdb, lg, tracer.Tracer("repository"))
+	defer tracer.Shutdown(ctx)
 
-	// net
-	listener, err := net.Listen("tcp", ":50051")
+	service := service.Service{*service.NewToken(cfg.JwtSecretKey)}
+	grpcServer, err := grpcserver.New(cfg.GrpcConfig, &service)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to craete server: %v", err)
 	}
 
-	tokenService := service.NewTokenService(tokenRepo, tokenMaker, lg, tracer.Tracer("service"))
-	server := grpc.NewServer(grpc.ChainUnaryInterceptor(tokenService.TracingMiddleware, tokenService.LoggingInterceptor))
-	tokenpb.RegisterTokenServiceServer(server, tokenService)
-
-	lg.Info("start gRPC service")
-	if err := server.Serve(listener); err != nil {
-		panic(err)
+	if err := grpcServer.Start(); err != nil {
+		log.Fatalf("grpc server error: %v", err)
 	}
+
+	<-ctx.Done()
+	grpcServer.Stop()
 }

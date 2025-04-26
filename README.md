@@ -91,8 +91,8 @@ JXGERcorp Banking предоставляет пользователям след
         }
         ```
 
-### API Transaction
-- **POST** `api/v1/transaction/create`:
+### API Transfer
+- **POST** `api/v1/transfer/create`:
     - Создает транзакцию (перевод денег между пользователями).
     - Тело запроса:
         ```json
@@ -113,7 +113,7 @@ JXGERcorp Banking предоставляет пользователям след
         }
         ```
 
-- **GET** `api/v1/transaction/search`:
+- **GET** `api/v1/transfer/search`:
     - Получает историю транзакций с поддержкой постраничного просмотра.
     - Тело запроса:
         ```json
@@ -163,7 +163,7 @@ JXGERcorp Banking предоставляет пользователям след
 - **services/** — микросервисы на Go:
     - api-gateway — точка входа в систему, проксирует запросы, обрабатывает авторизацию и трассировку.
     - user — управление пользователями (регистрация, авторизация, получение баланса и подтверждение email).
-    - transaction — обработка переводов и истории транзакций.
+    - transfer — обработка переводов и истории транзакций.
     - token — управление токенами и аутентификацией (gRPC).
     - notification — сервис отправки email уведомлений, взаимодействующий через Kafka.
     - db — скрипты миграций, sqlc-код и другие файлы, связанные с базой данных.
@@ -222,7 +222,7 @@ npm run serve
 ```sh
 go run services/api-gateway/cmd/main.go
 go run services/user/cmd/main.go
-go run services/transaction/cmd/main.go
+go run services/transfer/cmd/main.go
 go run services/token/cmd/main.go
 go run services/notification/cmd/main.go
 ```

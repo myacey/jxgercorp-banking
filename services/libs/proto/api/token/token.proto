@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "google/protobuf/timestamp.proto";
+// import "google/protobuf/timestamp.proto";
 
 // protoc \
 //     --proto_path=./libs/proto/api/token \
@@ -11,7 +11,7 @@ import "google/protobuf/timestamp.proto";
 
 package tokenpb;
 
-option go_package = "github.com/myacey/jxgercorp-banking/services/libs/proto/api/token";
+option go_package = "github.com/myacey/jxgercorp-banking/services/libs/proto/api/token;tokenpb";
 
 service TokenService {
     rpc GenerateToken(GenerateTokenRequest) returns (GenerateTokenResponse);
@@ -20,7 +20,6 @@ service TokenService {
 
 message GenerateTokenRequest {
     string username = 1;
-    google.protobuf.Timestamp ttl = 2;
 }
 
 message GenerateTokenResponse {

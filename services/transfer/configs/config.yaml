@@ -1,0 +1,8 @@
+httpserver:
+  listen: ":8082"
+
+postgres:
+  host: localhost
+  port: 5433
+  user: postgres
+  db_name: jxger_bank

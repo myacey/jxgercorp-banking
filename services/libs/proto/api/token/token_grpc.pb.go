@@ -4,13 +4,15 @@
 // - protoc             v5.29.0
 // source: token.proto
 
+// import "google/protobuf/timestamp.proto";
+
 // protoc \
 //     --proto_path=./libs/proto/api/token \
 //     --go_out=paths=source_relative:./libs/proto/api/token \
 //     --go-grpc_out=paths=source_relative:./libs/proto/api/token \
 //     ./libs/proto/api/token/token.proto
 
-package token
+package tokenpb
 
 import (
 	context "context"

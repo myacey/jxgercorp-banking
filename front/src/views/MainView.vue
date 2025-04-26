@@ -15,7 +15,7 @@
             <!-- Левое меню баланса -->
             <div class="main-box">
                 <div class="balance-section">
-                    <button class="btn btn-primary" @click="showModal = true">New Transaction</button>
+                    <button class="btn btn-primary" @click="showModal = true">New Transfer</button>
                     <p class="balance">${{ balance }}</p>
                     <span class="owner">{{ username }}</span>
                 </div>
@@ -24,13 +24,13 @@
             <!-- Окно создания перевода -->
             <div v-if="showModal" class="modal-overlay" @click.self="showModal=false">
                 <div class="modal">
-                    <h3>New Transaction</h3>
+                    <h3>New Transfer</h3>
                     <input v-model="recipient" type="text" placeholder="Recipient">
                     <input v-model.number="amount" type="number" placeholder="Amount">
 
                     <div class="buttons">
                         <button class="btn btn-secondary" @click="showModal=false">Cancel</button>
-                        <button class="btn btn-primary" @click="commitTransaction">Commit</button>
+                        <button class="btn btn-primary" @click="commitTransfer">Commit</button>
                     </div>
                 </div>
             </div>
@@ -57,10 +57,10 @@
         <!-- Окно истории переводов -->
          <div v-if="showTrxHistoryModel" class="modal-overlay" @click.self="showTrxHistoryModel=false">
             <div class="modal">
-                <h3>Transaction History</h3>
+                <h3>Transfer History</h3>
                 <div class="divider"></div>
                 
-                <div v-if="trxHistory.length > 0" class="transactions-list">
+                <div v-if="trxHistory.length > 0" class="transfers-list">
 
                     <div v-for="(entry, index) in trxHistory" :key="index" class="history-entry">
                         <!-- <span class="entry-created-at">{{ entry.createdAt }}</span> -->
@@ -79,7 +79,7 @@
 
                 </div>
                 <div v-else>
-                    No transactions found
+                    No transfers found
                 </div>
 
                 <div class="query-control">
@@ -96,7 +96,7 @@
 </template>
 
 <script>
-import { createTransaction, fetchTransactions, getUserBalance } from '@/api/api';
+import { createTransfer, fetchTransfers, getUserBalance } from '@/api/api';
 import { getUsernameFromToken } from '@/utils/auth';
 import { convertKeysToCamel } from '@/utils/snake2camel';
 import { snake } from "case";
@@ -128,11 +128,11 @@ export default {
             const snakeSearchTrxData = Object.fromEntries(
                 Object.entries(searchTrxData).map(([key, value]) => [snake(key), value])
             );
-            const responseSnake = await fetchTransactions(snakeSearchTrxData);
-            console.log('fetched transactions:', responseSnake);
+            const responseSnake = await fetchTransfers(snakeSearchTrxData);
+            console.log('fetched transfers:', responseSnake);
 
             this.entries = (convertKeysToCamel(responseSnake));
-            console.log('transactions:', this.entries);
+            console.log('transfers:', this.entries);
         },
         async fetchTrxHistory() {
             const fetchTrxHistory = {
@@ -143,15 +143,15 @@ export default {
                 Object.entries(fetchTrxHistory).map(([key, value]) => [snake(key), value])
             );
 
-            const responseSnake = await fetchTransactions(snakeSearchTrxData);
-            console.log('fetched transactions:', responseSnake);
+            const responseSnake = await fetchTransfers(snakeSearchTrxData);
+            console.log('fetched transfers:', responseSnake);
 
             this.trxHistory = (convertKeysToCamel(responseSnake));
             this.hasNextPage = responseSnake.length > this.trxHistoryLimit;
             this.trxHistory = this.trxHistory.slice(0, this.trxHistoryLimit);
-            console.log('transactions in history:', this.trxHistory); 
+            console.log('transfers in history:', this.trxHistory); 
         },
-        async commitTransaction() {
+        async commitTransfer() {
             if (!this.recipient || !this.amount) return;
             try {
                 const trxData = {
@@ -161,14 +161,14 @@ export default {
                 const snakeTrxData = Object.fromEntries(
                     Object.entries(trxData).map(([key, value]) => [snake(key), value])
                 );
-                await createTransaction(snakeTrxData);
+                await createTransfer(snakeTrxData);
                 this.showModal = false;
                 this.recipient = '';
                 this.amount = '';
                 await this.getBalance();
                 this.getLastEntries();
             } catch(err) {
-                console.log('Transaction failed:', err)
+                console.log('Transfer failed:', err)
             }
         },
         decreaseOffset() {
@@ -368,7 +368,7 @@ export default {
     color: darkred;
 }
 
-.transactions-list {
+.transfers-list {
     display: flex;
     flex-direction: column;
     gap: 10px;

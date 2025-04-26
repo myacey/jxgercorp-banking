@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -26,17 +27,34 @@ func (h *Handler) AuthTokenMiddleware() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-		authToken, err := c.Cookie("authToken")
-		if err != nil {
-			wrapCtxWithError(c, apperror.NewUnauthorized("invalid token"))
+		authToken := c.GetHeader(HeaderAuthorization)
+		if authToken == "" {
+			wrapCtxWithError(c, apperror.NewUnauthorized("Authorization Header required"))
 			span.End()
+			c.Abort()
 			return
 		}
 
-		usrname, valid, err := h.srv.Auth.ValidateToken(ctx, authToken)
-		if err != nil || !valid {
+		parts := strings.Fields(authToken)
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			wrapCtxWithError(c, apperror.NewUnauthorized("No bearer token found"))
+			span.End()
+			c.Abort()
+			return
+		}
+
+		usrname, valid, err := h.srv.Auth.ValidateToken(ctx, parts[1])
+		if err != nil {
 			wrapCtxWithError(c, err)
 			span.End()
+			c.Abort()
+			return
+		}
+
+		if !valid {
+			wrapCtxWithError(c, apperror.NewUnauthorized("invalid token"))
+			span.End()
+			c.Abort()
 			return
 		}
 

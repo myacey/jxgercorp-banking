@@ -52,6 +52,7 @@ func main() {
 	_ = telemetry.NewMetricsFactory("user-microservice")
 	// userMetrics := metricsFactory.NewUserMetrics()
 
+	// grpc client
 	grpcConn, err := grpcclient.MustInitConnection(cfg.GrpcConfig)
 	if err != nil {
 		log.Fatal(err)

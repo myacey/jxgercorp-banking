@@ -1,4 +1,6 @@
-grpc_target: "localhost:500051"
+grpcclient:
+  target: "localhost:50051"
+# grpc_target: "localhost:500051"
 
 kafka: 
   network: "tcp"

@@ -4,18 +4,19 @@
 // 	protoc        v5.29.0
 // source: token.proto
 
+// import "google/protobuf/timestamp.proto";
+
 // protoc \
 //     --proto_path=./libs/proto/api/token \
 //     --go_out=paths=source_relative:./libs/proto/api/token \
 //     --go-grpc_out=paths=source_relative:./libs/proto/api/token \
 //     ./libs/proto/api/token/token.proto
 
-package token
+package tokenpb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -31,7 +32,6 @@ const (
 type GenerateTokenRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Username      string                 `protobuf:"bytes,1,opt,name=username,proto3" json:"username,omitempty"`
-	Ttl           *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=ttl,proto3" json:"ttl,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -71,13 +71,6 @@ func (x *GenerateTokenRequest) GetUsername() string {
 		return x.Username
 	}
 	return ""
-}
-
-func (x *GenerateTokenRequest) GetTtl() *timestamppb.Timestamp {
-	if x != nil {
-		return x.Ttl
-	}
-	return nil
 }
 
 type GenerateTokenResponse struct {
@@ -225,10 +218,9 @@ var File_token_proto protoreflect.FileDescriptor
 
 const file_token_proto_rawDesc = "" +
 	"\n" +
-	"\vtoken.proto\x12\atokenpb\x1a\x1fgoogle/protobuf/timestamp.proto\"`\n" +
+	"\vtoken.proto\x12\atokenpb\"2\n" +
 	"\x14GenerateTokenRequest\x12\x1a\n" +
-	"\busername\x18\x01 \x01(\tR\busername\x12,\n" +
-	"\x03ttl\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x03ttl\"-\n" +
+	"\busername\x18\x01 \x01(\tR\busername\"-\n" +
 	"\x15GenerateTokenResponse\x12\x14\n" +
 	"\x05token\x18\x01 \x01(\tR\x05token\",\n" +
 	"\x14ValidateTokenRequest\x12\x14\n" +
@@ -238,7 +230,7 @@ const file_token_proto_rawDesc = "" +
 	"\x05valid\x18\x02 \x01(\bR\x05valid2\xae\x01\n" +
 	"\fTokenService\x12N\n" +
 	"\rGenerateToken\x12\x1d.tokenpb.GenerateTokenRequest\x1a\x1e.tokenpb.GenerateTokenResponse\x12N\n" +
-	"\rValidateToken\x12\x1d.tokenpb.ValidateTokenRequest\x1a\x1e.tokenpb.ValidateTokenResponseBCZAgithub.com/myacey/jxgercorp-banking/services/libs/proto/api/tokenb\x06proto3"
+	"\rValidateToken\x12\x1d.tokenpb.ValidateTokenRequest\x1a\x1e.tokenpb.ValidateTokenResponseBKZIgithub.com/myacey/jxgercorp-banking/services/libs/proto/api/token;tokenpbb\x06proto3"
 
 var (
 	file_token_proto_rawDescOnce sync.Once
@@ -258,19 +250,17 @@ var file_token_proto_goTypes = []any{
 	(*GenerateTokenResponse)(nil), // 1: tokenpb.GenerateTokenResponse
 	(*ValidateTokenRequest)(nil),  // 2: tokenpb.ValidateTokenRequest
 	(*ValidateTokenResponse)(nil), // 3: tokenpb.ValidateTokenResponse
-	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
 }
 var file_token_proto_depIdxs = []int32{
-	4, // 0: tokenpb.GenerateTokenRequest.ttl:type_name -> google.protobuf.Timestamp
-	0, // 1: tokenpb.TokenService.GenerateToken:input_type -> tokenpb.GenerateTokenRequest
-	2, // 2: tokenpb.TokenService.ValidateToken:input_type -> tokenpb.ValidateTokenRequest
-	1, // 3: tokenpb.TokenService.GenerateToken:output_type -> tokenpb.GenerateTokenResponse
-	3, // 4: tokenpb.TokenService.ValidateToken:output_type -> tokenpb.ValidateTokenResponse
-	3, // [3:5] is the sub-list for method output_type
-	1, // [1:3] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	0, // 0: tokenpb.TokenService.GenerateToken:input_type -> tokenpb.GenerateTokenRequest
+	2, // 1: tokenpb.TokenService.ValidateToken:input_type -> tokenpb.ValidateTokenRequest
+	1, // 2: tokenpb.TokenService.GenerateToken:output_type -> tokenpb.GenerateTokenResponse
+	3, // 3: tokenpb.TokenService.ValidateToken:output_type -> tokenpb.ValidateTokenResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
+	0, // [0:0] is the sub-list for extension type_name
+	0, // [0:0] is the sub-list for extension extendee
+	0, // [0:0] is the sub-list for field type_name
 }
 
 func init() { file_token_proto_init() }
