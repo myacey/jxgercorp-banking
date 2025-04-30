@@ -9,17 +9,17 @@ import (
 
 	"github.com/myacey/jxgercorp-banking/services/libs/web"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/grpcclient"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/kafka"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/repository"
-	"github.com/myacey/jxgercorp-banking/services/user/internal/service"
 )
 
 type AppConfig struct {
 	PostgresCfg repository.PostgresConfig `mapstructure:"postgres"`
 	RedisCfg    repository.RedisConfig    `mapstructure:"redis"`
 
-	KafkaCfg      service.ConfirmationKafkaConfig `mapstructure:"kafka"`
-	GrpcConfig    grpcclient.Config               `mapstructure:"grpcclient"`
-	HTTPServerCfg web.ServerConfig                `mapstructure:"httpserver"`
+	KafkaCfg      kafka.Config      `mapstructure:"kafka"`
+	GrpcConfig    grpcclient.Config `mapstructure:"grpcclient"`
+	HTTPServerCfg web.ServerConfig  `mapstructure:"httpserver"`
 }
 
 func LoadConfig(cfgPath string) (config AppConfig, err error) {

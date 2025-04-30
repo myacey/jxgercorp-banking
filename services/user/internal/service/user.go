@@ -95,7 +95,7 @@ func (s *User) CreateUser(ctx context.Context, req *request.Register) (*entity.U
 		}
 	}
 
-	err = s.confirmCodeSrv.generateAccountConfirmation(ctx, req.Username, req.Email)
+	err = s.confirmCodeSrv.generateAccountConfirmation(ctx, user.Username, user.Email)
 	if err != nil {
 		return nil, err
 	}

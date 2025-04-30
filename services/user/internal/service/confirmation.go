@@ -2,91 +2,83 @@ package service
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
 	"time"
 
-	"github.com/myacey/jxgercorp-banking/services/libs/apperror"
-	"github.com/myacey/jxgercorp-banking/services/libs/sharedmodels"
-	"github.com/myacey/jxgercorp-banking/services/libs/util"
-	"github.com/segmentio/kafka-go"
+	"github.com/google/uuid"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-)
 
-type ConfirmationKafkaConfig struct {
-	Network      string `mapstructure:"network"`
-	ListenAdress string `mapstructure:"adress"`
-	Topic        string `mapstructure:"topic"`
-	Partion      int    `mapstructure:"partion"`
-}
+	"github.com/myacey/jxgercorp-banking/services/libs/apperror"
+	"github.com/myacey/jxgercorp-banking/services/libs/util"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/models/entity"
+)
 
 type ConfirmRepo interface {
 	CreateCode(ctx context.Context, username string, code string) error
 	GetCode(ctx context.Context, username string) (string, error)
 }
 
+type ConfirmationSender interface {
+	Send(ctx context.Context, val interface{}) error
+}
+
 type Confirmation struct {
-	repo ConfirmRepo
-	cfg  ConfirmationKafkaConfig
+	repo   ConfirmRepo
+	sender ConfirmationSender
 
 	tracer trace.Tracer
 }
 
-func NewConfirmationService(repo ConfirmRepo, cfg ConfirmationKafkaConfig) *Confirmation {
+func NewConfirmationService(repo ConfirmRepo, sender ConfirmationSender) *Confirmation {
 	return &Confirmation{
 		repo:   repo,
-		cfg:    cfg,
+		sender: sender,
+
 		tracer: otel.Tracer("service-confirmation"),
 	}
 }
 
 // GenerateAccountConfirmation generates confirm code and sends
 // it to kafka. Returns apperror
-func (cs *Confirmation) generateAccountConfirmation(c context.Context, username, email string) error {
-	c, span := cs.tracer.Start(c, "email-confirmation: GenerateAccountConfirmation")
+func (cs *Confirmation) generateAccountConfirmation(ctx context.Context, username, email string) error {
+	ctx, span := cs.tracer.Start(ctx, "email-confirmation: GenerateAccountConfirmation")
 	defer span.End()
 
 	confirmCode := util.RandomString(32)
 
-	err := cs.repo.CreateCode(c, username, confirmCode)
+	err := cs.repo.CreateCode(ctx, username, confirmCode)
 	if err != nil {
-		return apperror.NewInternal("failed to create confirm code", err)
+		return apperror.NewInternal("failed to create confirmation code", err)
 	}
 
-	msg := &sharedmodels.RegisterConfirmMsgEmail{
-		Username:    username,
-		Email:       email,
-		ConfirmCode: confirmCode,
+	link := fmt.Sprintf("localhost:80/api/v1/user/confirm?username=%s&code=%s", username, confirmCode)
+
+	msg := fmt.Sprintf("Dear %s.\nTo confirm your account, proceed the link: %v", username, link)
+	n := entity.Notification{
+		ID:        uuid.New(),
+		Username:  username,
+		Email:     email,
+		Type:      "mail",
+		Subject:   "Account Confirmation",
+		Text:      msg,
+		CreatedAt: time.Now(),
 	}
 
-	msgMarshalled, err := json.Marshal(msg)
+	start := time.Now()
+	err = cs.sender.Send(ctx, n)
 	if err != nil {
-		return apperror.NewInternal("failed to create confirm code", err)
+		return apperror.NewInternal("failed to send confirmation", err)
 	}
+	span.SetAttributes(attribute.Float64("kafka.creation.time.ms", float64(time.Since(start).Milliseconds())))
 
-	// kafka
-	conn, err := kafka.DialLeader(c, cs.cfg.Network, cs.cfg.ListenAdress, cs.cfg.Topic, cs.cfg.Partion)
-	if err != nil {
-		return apperror.NewInternal("failed to create confirm code", err)
-	}
-
-	conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-	_, err = conn.WriteMessages(
-		kafka.Message{Value: msgMarshalled},
-	)
-	if err != nil {
-		return apperror.NewInternal("failed to create confirm code", err)
-	}
-
-	if err = conn.Close(); err != nil {
-		return apperror.NewInternal("failed to create confirm code", err)
-	}
 	return nil
 }
 
 // CheckConfirmCode checks confirm code
-func (cs *Confirmation) checkConfirmCode(c context.Context, username, confirmCode string) error {
-	c, span := cs.tracer.Start(c, "email-confirmation: CheckConfirmCode")
+func (cs *Confirmation) checkConfirmCode(ctx context.Context, username, confirmCode string) error {
+	c, span := cs.tracer.Start(ctx, "email-confirmation: CheckConfirmCode")
 	defer span.End()
 
 	dbConfirmCode, err := cs.repo.GetCode(c, username)

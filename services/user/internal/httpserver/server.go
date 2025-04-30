@@ -13,6 +13,7 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/user/internal/httpserver/handler"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/grpcclient"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/hasher"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/kafka"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/repository/confirmationrepo"
 	db "github.com/myacey/jxgercorp-banking/services/user/internal/repository/sqlc"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/repository/userrepo"
@@ -60,7 +61,9 @@ func (app *App) initialize(
 	usrRepo := userrepo.NewUserRepo(queries)
 	confirmRepo := confirmationrepo.NewConfirmationCodesRepo(store)
 
-	confirmSrv := service.NewConfirmationService(confirmRepo, cfg.KafkaCfg)
+	kafkaProducer := kafka.NewProducer(cfg.KafkaCfg)
+
+	confirmSrv := service.NewConfirmationService(confirmRepo, kafkaProducer)
 	hasherSrv := hasher.NewBcrypt()
 	app.service = &service.Service{
 		User: *service.NewUserSrv(usrRepo, *confirmSrv, grpcClient, hasherSrv),

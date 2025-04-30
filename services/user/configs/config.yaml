@@ -2,11 +2,10 @@ grpcclient:
   target: "localhost:50051"
 # grpc_target: "localhost:500051"
 
-kafka: 
-  network: "tcp"
-  adress: "localhost:9092"
+kafka:
+  brokers:
+    - localhost:9092
   topic: "notif.email.register.confirm"
-  partion: 0
 
 httpserver:
   listen: ":8081"

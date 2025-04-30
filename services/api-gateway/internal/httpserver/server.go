@@ -60,8 +60,6 @@ func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientIm
 	protected := app.router.Group("/api/v1")
 	protected.Use(handl.AuthTokenMiddleware())
 	{
-		// TODO: change addresses
-		// protected.Any("/transfer/account", handl.ProxyHandler("http://localhost:8082"))
 		protected.Match(
 			[]string{http.MethodOptions, http.MethodGet, http.MethodPost},
 			"/transfer/account",
@@ -73,10 +71,6 @@ func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientIm
 			"/transfer",
 			handl.ProxyHandler("http://localhost:8082"),
 		)
-
-		// protected.Any("/transfer/create", handl.ProxyHandler("http://localhost:8082"))
-		// protected.Any("/transfer/search", handl.ProxyHandler("http://localhost:8082"))
-		// protected.Match([]string{http.MethodOptions, http.MethodGet}, "/transfer/search", handl.ProxyHandler("http://localhost:8082"))
 	}
 
 	return nil

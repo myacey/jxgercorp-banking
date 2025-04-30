@@ -1,0 +1,10 @@
+kafka:
+  brokers:
+    - localhost:9092
+  group_id: 1
+  topic: "notif.email.register.confirm"
+
+smtp:
+  from: "black13exo@gmail.com"
+  host: "smtp.gmail.com"
+  port: 587
