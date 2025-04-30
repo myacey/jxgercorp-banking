@@ -8,6 +8,8 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/notification/internal/application/port/in"
 	"github.com/myacey/jxgercorp-banking/services/notification/internal/domain"
 	"github.com/segmentio/kafka-go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Config struct {
@@ -19,6 +21,8 @@ type Config struct {
 type Consumer struct {
 	reader  *kafka.Reader
 	handler in.NotificationUseCaese
+
+	tracer trace.Tracer
 }
 
 func NewConsumer(cfg Config, handler in.NotificationUseCaese) *Consumer {
@@ -28,27 +32,32 @@ func NewConsumer(cfg Config, handler in.NotificationUseCaese) *Consumer {
 		Topic:   cfg.Topic,
 	})
 
-	return &Consumer{reader: reader, handler: handler}
+	return &Consumer{reader: reader, handler: handler, tracer: otel.Tracer("adapter-inbound-consumer")}
 }
 
 func (c *Consumer) Start(ctx context.Context) {
 	go func() {
 		for {
 			m, err := c.reader.ReadMessage(ctx)
+			ctx, span := c.tracer.Start(ctx, "adapter: ProceedKafkaMsg")
+
 			if err != nil {
 				log.Printf("ERROR: kafka read: %v", err)
+				span.End()
 				continue
 			}
 
 			var n domain.Notification
 			if err := json.Unmarshal(m.Value, &n); err != nil {
 				log.Printf("ERROR: Invalid message: %v", err)
+				span.End()
 				continue
 			}
 			log.Printf("got message: %v", n)
 			if err := c.handler.Handle(ctx, n); err != nil {
 				log.Printf("ERROR: Handler error: %v", err)
 			}
+			span.End()
 		}
 	}()
 }

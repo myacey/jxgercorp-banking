@@ -49,7 +49,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_ = telemetry.NewMetricsFactory("user-microservice")
+	// _ = telemetry.NewMetricsFactory("user-microservice")
 	// userMetrics := metricsFactory.NewUserMetrics()
 
 	// grpc client

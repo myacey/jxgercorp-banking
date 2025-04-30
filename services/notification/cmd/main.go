@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
 	"github.com/myacey/jxgercorp-banking/services/notification/internal/adapter/inbound/kafka"
 	"github.com/myacey/jxgercorp-banking/services/notification/internal/adapter/outbound/smtp"
 	"github.com/myacey/jxgercorp-banking/services/notification/internal/application/service"
@@ -27,6 +28,13 @@ func main() {
 	if err != nil {
 		log.Fatal("cannot load config:", err)
 	}
+
+	// tracer for Telemetry (Jaeger)
+	_, _, err = telemetry.StartTracer("notif-microservice", "0.0.1")
+	if err != nil {
+		log.Fatal(err)
+	}
+	// _ = telemetry.NewMetricsFactory("notif-microservice")
 
 	sender := smtp.NewSender(cfg.SMTPConfig)
 	usecase := service.NewNotificationService(sender)
