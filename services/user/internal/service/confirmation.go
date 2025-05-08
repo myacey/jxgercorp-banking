@@ -53,16 +53,24 @@ func (cs *Confirmation) generateAccountConfirmation(ctx context.Context, usernam
 		return apperror.NewInternal("failed to create confirmation code", err)
 	}
 
-	link := fmt.Sprintf("localhost:80/api/v1/user/confirm?username=%s&code=%s", username, confirmCode)
+	link := fmt.Sprintf("http://localhost:80/api/v1/user/confirm?username=%s&code=%s", username, confirmCode)
+	htmlMsg := fmt.Sprintf(`
+<!DOCTYPE html>
+<html>
+	<body>
+		<p>Dear %s</p>
+		<p>To confirm your account, please click the link bellow:</p>
+		<p><a href="%s">%s</a></p>
+	</body>
+</html>`, username, link, link)
 
-	msg := fmt.Sprintf("Dear %s.\nTo confirm your account, proceed the link: %v", username, link)
 	n := entity.Notification{
 		ID:        uuid.New(),
 		Username:  username,
 		Email:     email,
 		Type:      "mail",
 		Subject:   "Account Confirmation",
-		Text:      msg,
+		Text:      htmlMsg,
 		CreatedAt: time.Now(),
 	}
 

@@ -53,7 +53,7 @@ func (c *Consumer) Start(ctx context.Context) {
 				span.End()
 				continue
 			}
-			log.Printf("got message: %v", n)
+			log.Printf("got message: %v", n.Subject)
 			if err := c.handler.Handle(ctx, n); err != nil {
 				log.Printf("ERROR: Handler error: %v", err)
 			}

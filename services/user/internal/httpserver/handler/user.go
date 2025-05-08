@@ -12,6 +12,9 @@ import (
 const (
 	secondsPerDay = 86400
 	CookieAuth    = "authToken"
+
+	QueryUsername    = "username"
+	QueryConfirmCode = "code"
 )
 
 // CreateUser checks request's json and send req so service
@@ -60,13 +63,19 @@ func (h *Handler) ConfirmUserEmail(c *gin.Context) {
 	defer span.End()
 	c.Request = c.Request.WithContext(ctx)
 
-	var req request.ConfirmUserEmail
-	if err := c.ShouldBindJSON(&req); err != nil {
-		wrapCtxWithError(c, apperror.NewBadReq("invalid req: "+err.Error()))
+	username, ok := c.GetQuery(QueryUsername)
+	if !ok {
+		wrapCtxWithError(c, apperror.NewBadReq("invalid req: no username query key"))
 		return
 	}
 
-	msg, err := h.userSrv.ConfirmUserEmail(c, &req)
+	code, ok := c.GetQuery(QueryConfirmCode)
+	if !ok {
+		wrapCtxWithError(c, apperror.NewBadReq("invalid req: no code query key"))
+		return
+	}
+
+	msg, err := h.userSrv.ConfirmUserEmail(c, &request.ConfirmUserEmail{username, code})
 	if err != nil {
 		wrapCtxWithError(c, err)
 		return

@@ -35,11 +35,11 @@ func New(
 ) (*App, error) {
 	app := &App{}
 	err := app.initialize(cfg, conn, queries, store, grpcClient)
+	app.server = web.NewServer(cfg.HTTPServerCfg, app.router)
 	if err != nil {
 		return nil, err
 	}
 
-	app.server = web.NewServer(cfg.HTTPServerCfg, app.router)
 	return app, nil
 }
 
@@ -85,7 +85,7 @@ func (app *App) initialize(
 	}))
 	app.router.POST("/api/v1/user/register", handlr.CreateUser)
 	app.router.POST("/api/v1/user/login", handlr.Login)
-	app.router.POST("/api/v1/user/confirm", handlr.ConfirmUserEmail)
+	app.router.GET("/api/v1/user/confirm", handlr.ConfirmUserEmail)
 
 	return nil
 }

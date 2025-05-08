@@ -36,7 +36,7 @@ func (s *Sender) Send(ctx context.Context, to, subject, body string) error {
 	m.SetHeader("From", s.from)
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", subject)
-	m.SetBody("text/plain", body)
+	m.SetBody("text/html", body)
 
 	return s.dialerConn.DialAndSend(m)
 }

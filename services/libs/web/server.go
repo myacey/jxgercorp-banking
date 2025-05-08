@@ -74,6 +74,10 @@ func (s *BaseServer) Run(ctx context.Context) error {
 		}
 	}()
 
+	s.Router().GET("/live", func(ctx *gin.Context) {
+		ctx.Status(http.StatusOK)
+	})
+
 	log.Printf("start server on %v", s.httpServer.Addr)
 	return s.httpServer.ListenAndServe()
 }

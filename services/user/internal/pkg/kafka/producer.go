@@ -3,51 +3,48 @@ package kafka
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"time"
 
 	"github.com/segmentio/kafka-go"
 )
 
 type Config struct {
-	Brokers []string `mapstructure:"brokers"`
-	Topic   string   `mapstructure:"topic"`
+	Network string `mapstructure:"network"`
+	Broker  string `mapstructure:"broker"`
+	Topic   string `mapstructure:"topic"`
+	Partion int    `mapstructure:"partion"`
+
+	WriteDeadline int `mapstructure:"write_deadline"`
 }
 
 type Producer struct {
-	writer *kafka.Writer
+	cfg Config
 }
 
 func NewProducer(cfg Config) *Producer {
-	return &Producer{
-		writer: &kafka.Writer{
-			Addr:         kafka.TCP(cfg.Brokers...),
-			Topic:        cfg.Topic,
-			Balancer:     &kafka.LeastBytes{},
-			RequiredAcks: kafka.RequireOne,
-		},
-	}
+	return &Producer{cfg}
 }
 
 func (p *Producer) Send(ctx context.Context, val interface{}) error {
-	b, err := json.Marshal(val)
+	data, err := json.Marshal(val)
 	if err != nil {
 		return err
 	}
 
+	conn, err := kafka.DialLeader(ctx, p.cfg.Network, p.cfg.Broker, p.cfg.Topic, p.cfg.Partion)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	conn.SetWriteDeadline(time.Now().Add(time.Millisecond * time.Duration(p.cfg.WriteDeadline)))
 	msg := kafka.Message{
-		Value: b,
-		Time:  time.Now(),
+		Value: data,
+	}
+	_, err = conn.WriteMessages(msg)
+	if err != nil {
+		return err
 	}
 
-	err = p.writer.WriteMessages(ctx, msg)
-	if err != nil {
-		switch {
-		case errors.Is(err, kafka.ErrGenerationEnded):
-			return nil
-		default:
-			return err
-		}
-	}
-	return p.writer.WriteMessages(ctx, msg)
+	return nil
 }
