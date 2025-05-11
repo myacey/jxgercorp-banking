@@ -21,6 +21,7 @@ type AppConfig struct {
 
 func LoadConfig(cfgPath string) (config AppConfig, err error) {
 	_ = godotenv.Load("../../.env")
+	_ = godotenv.Load("../../.env.private")
 
 	viper.SetConfigFile(cfgPath)
 	if err = viper.ReadInConfig(); err != nil {

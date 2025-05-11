@@ -5,7 +5,7 @@ kafka:
   topic: "notif.email.register.confirm"
 
 smtp:
-  username: ${SMTP_USERNAME}
+  username: ${SMTP_MAIL_ADRESS}
   password: ${SMTP_PASSWORD}
   host: "smtp.gmail.com"
   port: 587
