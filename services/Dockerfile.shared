@@ -1,0 +1,32 @@
+# ==========================
+#  Build stage
+# ==========================
+FROM golang:1.24-alpine AS builder
+ARG SERVICE
+WORKDIR /app
+
+# COPY go.work go.work.sum ./services/
+COPY /${SERVICE}/go.mod /${SERVICE}/go.sum* ./${SERVICE}/
+COPY ./libs/ ./libs/
+
+RUN cd ./${SERVICE} && go mod download
+
+COPY ${SERVICE}/ ./${SERVICE}/
+
+WORKDIR /app/${SERVICE}
+RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/main.go
+
+# ==========================
+#  Runtime stage
+# ==========================
+FROM alpine:latest
+ARG SERVICE
+ARG PORT
+RUN apk add --no-cache ca-certificates
+WORKDIR /app/{SERVICE}
+
+COPY --from=builder ./app/${SERVICE}/main .
+COPY ./${SERVICE}/configs/ ./configs
+
+EXPOSE ${PORT}
+ENTRYPOINT [ "./main" ]

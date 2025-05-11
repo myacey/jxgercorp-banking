@@ -18,18 +18,15 @@ type App struct {
 	service *service.Service
 }
 
-func New(cfg config.AppConfig, grpcClient *grpcclient.ClientImpl) (*App, error) {
+func New(cfg config.AppConfig, grpcClient *grpcclient.ClientImpl) *App {
 	app := &App{
 		router: gin.Default(),
 	}
 	app.server = web.NewServer(cfg.HTTPServerCfg, app.router)
 
-	err := app.initialize(cfg, grpcClient)
-	if err != nil {
-		return nil, err
-	}
+	app.initialize(cfg, grpcClient)
 
-	return app, nil
+	return app
 }
 
 func (app *App) Start(ctx context.Context) error {
@@ -40,7 +37,7 @@ func (app *App) Stop(ctx context.Context) error {
 	return app.server.Shutdown(ctx)
 }
 
-func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientImpl) error {
+func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientImpl) {
 	app.service = &service.Service{
 		Auth: *service.NewAuthService(grpcClient),
 	}
@@ -49,29 +46,38 @@ func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientIm
 	app.router.Use(handl.MetricsMiddleware())
 	app.router.Use(handl.TracingMiddleware())
 
-	public := app.router.Group("/api/v1")
+	public := app.router.Group("/api/v1/user")
 	{
-		// TODO: change addresses
-		public.Any("/user/register", handl.ProxyHandler("http://localhost:8081"))
-		public.Any("/user/login", handl.ProxyHandler("http://localhost:8081"))
-		public.Any("/user/confirm", handl.ProxyHandler("http://localhost:8081"))
+		public.Match(
+			[]string{http.MethodOptions, http.MethodPost},
+			"/register",
+			handl.ProxyHandler(cfg.Services["user-service"]),
+		)
+		public.Match(
+			[]string{http.MethodOptions, http.MethodPost},
+			"/login",
+			handl.ProxyHandler(cfg.Services["user-service"]),
+		)
+		public.Match(
+			[]string{http.MethodOptions, http.MethodGet},
+			"/confirm",
+			handl.ProxyHandler(cfg.Services["user-service"]),
+		)
 	}
 
-	protected := app.router.Group("/api/v1")
+	protected := app.router.Group("/api/v1/transfer")
 	protected.Use(handl.AuthTokenMiddleware())
 	{
 		protected.Match(
 			[]string{http.MethodOptions, http.MethodGet, http.MethodPost},
-			"/transfer/account",
-			handl.ProxyHandler("http://localhost:8082"),
+			"/account",
+			handl.ProxyHandler(cfg.Services["transfer-service"]),
 		)
 
 		protected.Match(
 			[]string{http.MethodOptions, http.MethodGet, http.MethodPost},
-			"/transfer",
-			handl.ProxyHandler("http://localhost:8082"),
+			"",
+			handl.ProxyHandler(cfg.Services["transfer-service"]),
 		)
 	}
-
-	return nil
 }

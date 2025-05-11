@@ -1,9 +1,9 @@
 grpcclient:
-  target: "localhost:50051"
+  target: ${TOKEN_SERVICE_URL}
 
 kafka:
   network: "tcp"
-  broker: "localhost:9092"
+  broker: ${KAFKA_NOTIF_URL}
   topic: "notif.email.register.confirm"
   partion: 0
   write_deadline: 10
@@ -12,13 +12,17 @@ httpserver:
   listen: ":8081"
 
 postgres:
-  host: localhost
-  port: 5432
+  host: ${USER_POSTGRES_HOST}
+  port: ${USER_POSTGRES_PORT}
   user: postgres
+  password: ${USER_POSTGRES_PASSWORD}
   db_name: jxger_bank
 
 redis:
-  adress: localhost:6379
+  host: ${USER_REDIS_HOST}
+  port: 6379
+  password: ${USER_REDIS_PASSWORD}
+  # adress: localhost:6379
   index: 0
   pool_size: 1024
   min_idle_conn: 30

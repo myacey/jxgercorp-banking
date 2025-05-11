@@ -3,7 +3,7 @@ CREATE TYPE currency_enum AS ENUM ('RUB', 'USD', 'EUR');
 CREATE TABLE "accounts" (
     "id" UUID PRIMARY KEY,
     "owner_username" VARCHAR(50) NOT NULL,
-    "balance" BIGINT NOT NULL CHECK("balance" > 0),
+    "balance" BIGINT NOT NULL CHECK("balance" >= 0),
     "currency" currency_enum NOT NULL,
     "created_at" TIMESTAMPTZ NOT NULL DEFAULT(NOW())
 );

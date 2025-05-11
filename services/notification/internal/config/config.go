@@ -3,11 +3,14 @@ package config
 import (
 	"log"
 	"os"
+	"reflect"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
+
 	"github.com/myacey/jxgercorp-banking/services/notification/internal/adapter/inbound/kafka"
 	"github.com/myacey/jxgercorp-banking/services/notification/internal/adapter/outbound/smtp"
-	"github.com/spf13/viper"
 )
 
 type AppConfig struct {
@@ -22,14 +25,21 @@ func LoadConfig(cfgPath string) (config AppConfig, err error) {
 	if err = viper.ReadInConfig(); err != nil {
 		return
 	}
-	if err = viper.Unmarshal(&config); err != nil {
+
+	hook := mapstructure.DecodeHookFunc(func(
+		from reflect.Type, to reflect.Type, data interface{},
+	) (interface{}, error) {
+		if from.Kind() == reflect.String && to.Kind() == reflect.String {
+			return os.ExpandEnv(data.(string)), nil
+		}
+		return data, nil
+	})
+
+	if err = viper.Unmarshal(&config, viper.DecodeHook(hook)); err != nil {
 		return
 	}
 
-	config.SMTPConfig.Username = os.Getenv("STMP_USERNAME")
-	config.SMTPConfig.Password = os.Getenv("SMTP_PASSWORD")
-
-	log.Println("config:", config)
+	log.Printf("config: %+v", config)
 
 	return
 }

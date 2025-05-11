@@ -63,11 +63,12 @@ func initialize(conn *pgxpool.Pool, queries *db.Queries) *App {
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 	}))
-	app.router.POST("/api/v1/transfer/account", handlr.CreateAccount)
-	app.router.GET("/api/v1/transfer/account", handlr.SearchAccounts)
 
 	app.router.POST("/api/v1/transfer", handlr.CreateTransfer)
 	app.router.GET("/api/v1/transfer", handlr.SearchTransfersWithAccount)
+
+	app.router.POST("/api/v1/transfer/account", handlr.CreateAccount)
+	app.router.GET("/api/v1/transfer/account", handlr.SearchAccounts)
 
 	return app
 }

@@ -1,10 +1,11 @@
 kafka:
   brokers:
-    - localhost:9092
+    - ${KAFKA_NOTIF_URL}
   group_id: 1
   topic: "notif.email.register.confirm"
 
 smtp:
-  from: "black13exo@gmail.com"
+  username: ${SMTP_USERNAME}
+  password: ${SMTP_PASSWORD}
   host: "smtp.gmail.com"
   port: 587

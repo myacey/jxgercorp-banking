@@ -7,8 +7,10 @@ import (
 )
 
 type RedisConfig struct {
-	Address     string `mapstructure:"adress"`
-	Password    string // secret from env
+	// Address     string `mapstructure:"adress"`
+	Host        string `mapstructure:"host"`
+	Port        string `mapstructure:"port"`
+	Password    string `mapstructure:"password"`
 	DBIndex     int    `mapstructure:"index"`
 	PoolSize    int    `mapstructure:"pool_size"`
 	MinIdleConn int    `mapstructure:"min_idle_conn"`
@@ -16,8 +18,8 @@ type RedisConfig struct {
 
 func ConfigureRedisClient(cfg RedisConfig) (*redis.Client, error) {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.Address,
-		Password: cfg.Password, // no password set
+		Addr:     cfg.Host + ":" + cfg.Port,
+		Password: cfg.Password,
 		DB:       cfg.DBIndex,
 
 		PoolSize:     cfg.PoolSize,

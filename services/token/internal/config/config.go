@@ -28,7 +28,7 @@ func LoadConfig(cfgPath string) (config AppConfig, err error) {
 
 	config.JwtSecretKey = os.Getenv("JWT_SECRET_KEY")
 
-	log.Println("config:", config)
+	log.Printf("config: %+v", config)
 
 	return
 }

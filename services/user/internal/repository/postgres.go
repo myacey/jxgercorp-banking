@@ -15,7 +15,7 @@ type PostgresConfig struct {
 	Host     string `mapstrucrute:"host"`
 	Port     string `mapstructure:"port"`
 	User     string `mapstructure:"user"`
-	Password string // secret from env
+	Password string `mapstructure:"password"`
 	DBName   string `mapstructure:"db_name"`
 }
 

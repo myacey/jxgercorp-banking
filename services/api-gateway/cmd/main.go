@@ -8,10 +8,11 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
+
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/config"
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/httpserver"
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/pkg/grpcclient"
-	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
 )
 
 var cfgPath = flag.String("f", "./configs/config.yaml", "path to the api-gateway's config")
@@ -43,10 +44,7 @@ func main() {
 	}
 	defer grpcConn.Close()
 
-	app, err := httpserver.New(cfg, grpcclient.New(grpcConn))
-	if err != nil {
-		log.Fatal(err)
-	}
+	app := httpserver.New(cfg, grpcclient.New(grpcConn))
 	go func() {
 		<-ctx.Done()
 		app.Stop(ctx)

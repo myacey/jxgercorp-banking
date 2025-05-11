@@ -1,8 +1,8 @@
 go 1.23.3
 
 use (
-    ./user
     ./api-gateway
+    ./user
     ./token
     ./transfer
     ./notification

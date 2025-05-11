@@ -1,5 +1,9 @@
 grpcclient:
-  target: "localhost:50051"
+  target: ${TOKEN_SERVICE_URL}
 
 httpserver:
   listen: ":80"
+
+services:
+  user-service: ${USER_SERVICE_URL}
+  transfer-service: ${TRANSFER_SERVICE_URL}

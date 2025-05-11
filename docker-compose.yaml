@@ -117,23 +117,25 @@ services:
       - "9092:9092"
     environment:
       # Listeners
-      KAFKA_LISTENERS: controller://localhost:9091, HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
+      KAFKA_LISTENERS: CONTROLLER://localhost:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,DOCKER:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,HOST:PLAINTEXT,DOCKER:PLAINTEXT
 
-      # KRfat
+      # KRaft
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9091
 
-      # Listeners for broker-broker communication
+      # Broker-to-broker
       KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
 
-      # for single-node cluster
+      # Single-node
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - backend-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
   
   # OTEL-COLLECTOR
   otel-collector:
@@ -213,47 +215,87 @@ services:
     deploy:
       mode: global
 
-  # API-GATEWAY
-  # api-gateway:
-  #   build:
-  #     context: .
-  #     args:
-  #       SERVICE_NAME: api-gateway
-  #       PORT: 80
-  #   ports:
-  #     - "80:80"
-  #   networks:
-  #     - backend-net
-  
-  # # USER
-  # user-microservice:
-  #   build:
-  #     context: .
-  #     args:
-  #       SERVICE_NAME: user
-  #       PORT: 8081
-  #   ports:
-  #     - "8081:8081"
-  #   networks:
-  #     - backend-net
-  #   depends_on:
-  #     - postgres
+  api-gateway:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.shared
+      args:
+        SERVICE: api-gateway
+        PORT: 80
+    ports:
+      - 80:80
+    # volumes:
+      # - ../.env:/app/.env
+    env_file:
+      - .env
+      - .env.docker
+    networks:
+      - backend-net
 
-  # # TOKEN
-  # token-microservice:
-  #   build:
-  #     context: .
-  #     args:
-  #       SERVICE_NAME: token
-  #       PORT: 8083
-  #   ports:
-  #     - "8083:8083"
-  #   networks:
-  #     - backend-net
-  #   depends_on:
-  #     - redis
-  
-  
+  user-service:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.shared
+      args:
+        SERVICE: user
+        PORT: 8081
+    ports:
+      - 8081:8081
+    env_file:
+      - .env
+      - .env.docker
+    networks:
+      - backend-net
+    depends_on:
+      - postgres-user
+      - redis-user
+      - kafka
+
+  transfer-service:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.shared
+      args:
+        SERVICE: transfer
+        PORT: 8082
+    ports:
+      - 8082:8082
+    env_file:
+      - .env
+      - .env.docker
+    networks:
+      - backend-net
+    depends_on:
+      - postgres-transfer
+      - kafka
+
+  token-service:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.shared
+      args:
+        SERVICE: token
+        PORT: 50051
+    ports:
+      - 50051:50051
+    env_file:
+      - .env
+      - .env.docker
+    networks:
+      - backend-net
+
+  notification-service:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.shared
+      args:
+        SERVICE: notification
+    env_file:
+      - .env
+      - .env.docker
+    networks:
+      - backend-net
+
 networks:
   backend-net:
     driver: bridge

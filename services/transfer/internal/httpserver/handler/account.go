@@ -44,6 +44,7 @@ func (h *Handler) SearchAccounts(c *gin.Context) {
 	var req request.SearchAccounts
 	if err := c.ShouldBindJSON(&req); err != nil {
 		wrapCtxWithError(c, apperror.NewBadReq("invalid req: "+err.Error()))
+		return
 	}
 
 	req.Currency = strings.ToUpper(req.Currency)
