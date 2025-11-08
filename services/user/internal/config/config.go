@@ -10,9 +10,11 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/myacey/jxgercorp-banking/services/libs/web"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/httpserver/handler"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/grpcclient"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/kafka"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/repository"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/service"
 )
 
 type AppConfig struct {
@@ -22,6 +24,9 @@ type AppConfig struct {
 	KafkaCfg      kafka.Config      `mapstructure:"kafka"`
 	GrpcConfig    grpcclient.Config `mapstructure:"grpcclient"`
 	HTTPServerCfg web.ServerConfig  `mapstructure:"httpserver"`
+
+	ConfirmationCfg service.ConfirmationConfig `mapstructure:"confirmation"`
+	HandlerCfg      handler.Config             `mapstructure:"handler"`
 }
 
 func LoadConfig(cfgPath string) (config AppConfig, err error) {

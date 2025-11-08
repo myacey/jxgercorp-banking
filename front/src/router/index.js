@@ -12,22 +12,40 @@ const routes = [
   { path: '/', redirect: '/main' } // При заходе на '/' идём на '/main'
 ]
 
+// const router = new VueRouter({
+//   routes
+// });
+
 const router = new VueRouter({
+  mode: 'history',
   routes
-});
+})
 
 // Глобальная проверка токена перед каждой навигацией
-router.beforeEach(async (to, from, next) => {
-  const username = getUsernameFromToken(); // Проверяем наличие username в токене
+router.beforeEach((to, from, next) => {
+  const username = getUsernameFromToken();
 
-  if (!username && to.path !== '/login' && to.path !== '/register' && to.path !== '/user/confirm') {
-      next('/login'); // Если username нет → на login
-  } else if (username && (to.path === '/login' || to.path === '/register')) {
-      next('/main'); // Если username есть, но юзер на login → перекидываем на main
-  } else {
-      next(); // Иначе даём перейти
+  const publicPages = ['/login', '/register', '/user/confirm'];
+  const authRequired = !publicPages.includes(to.path);
+
+  // если пользователь не авторизован и идёт на приватную страницу
+  if (!username && authRequired) {
+    if (to.path !== '/login') {
+      return next('/login');
+    }
   }
+
+  // если пользователь уже авторизован и идёт на публичную страницу
+  if (username && publicPages.includes(to.path)) {
+    if (to.path !== '/main') {
+      return next({ path: '/main', replace: true });
+    }
+  }
+
+  // если всё ок — просто продолжаем
+  next();
 });
+
 
 
 export default router;

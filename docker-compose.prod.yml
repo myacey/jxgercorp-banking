@@ -1,0 +1,58 @@
+services:
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: frontend
+    image: myacey/front:latest
+    environment:
+      - NODE_ENV=prod
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./front:/app
+      - /app/node_modules
+      - /opt/certbot/jxgercorp:/etc/letsencrypt:ro
+      - /opt/certbot/jxgercorp/www:/var/www/certbot:rw
+    networks:
+      - jxgercorp-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+  
+    
+  migrate:
+    # build: null
+    image: myacey/migrate:latest
+  
+  api-gateway:
+    # build: null
+    image: myacey/api-gateway:latest
+
+  user-service:
+    # build: null
+    image: myacey/user-service:latest
+    environment:
+      - APP_PROTOCOL=https
+      - APP_DOMAIN=jxgercorp.ru
+
+  transfer-service:
+    # build: null
+    image: myacey/transfer-service:latest
+
+  token-service:
+    # build: null
+    image: myacey/token-service:latest
+
+  notification-service:
+    # build: null
+    image: myacey/notification-service:latest
+
+
+networks:
+  jxgercorp-net:
+    driver: bridge

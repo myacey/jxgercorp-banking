@@ -24,19 +24,28 @@ type ConfirmationSender interface {
 	Send(ctx context.Context, val interface{}) error
 }
 
+type ConfirmationConfig struct {
+	AppProtocol string `mapstructure:"app_protocol"`
+	AppDomain   string `mapstructure:"app_domain"`
+}
+
 type Confirmation struct {
 	repo   ConfirmRepo
 	sender ConfirmationSender
 
 	tracer trace.Tracer
+
+	cfg ConfirmationConfig
 }
 
-func NewConfirmationService(repo ConfirmRepo, sender ConfirmationSender) *Confirmation {
+func NewConfirmationService(repo ConfirmRepo, sender ConfirmationSender, cfg ConfirmationConfig) *Confirmation {
 	return &Confirmation{
 		repo:   repo,
 		sender: sender,
 
 		tracer: otel.Tracer("service-confirmation"),
+
+		cfg: cfg,
 	}
 }
 
@@ -53,7 +62,13 @@ func (cs *Confirmation) generateAccountConfirmation(ctx context.Context, usernam
 		return apperror.NewInternal("failed to create confirmation code", err)
 	}
 
-	link := fmt.Sprintf("http://localhost:80/api/v1/user/confirm?username=%s&code=%s", username, confirmCode)
+	link := fmt.Sprintf(
+		"%s://%s/user/confirm?username=%s&code=%s",
+		cs.cfg.AppProtocol,
+		cs.cfg.AppDomain,
+		username,
+		confirmCode,
+	)
 	htmlMsg := fmt.Sprintf(`
 <!DOCTYPE html>
 <html>

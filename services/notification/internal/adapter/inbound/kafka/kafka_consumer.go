@@ -54,6 +54,7 @@ func (c *Consumer) Start(ctx context.Context) {
 				continue
 			}
 			log.Printf("got message: %v", n.Subject)
+			log.Printf("message data: %v", n)
 			if err := c.handler.Handle(ctx, n); err != nil {
 				log.Printf("ERROR: Handler error: %v", err)
 			}

@@ -15,7 +15,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-// StartTracer initialize tracer exporter (to localhost:4318)
+// StartTracer initialize tracer exporter
 func StartTracer(serviceName, serviceVersion string) (*trace.TracerProvider, *metric.MeterProvider, error) {
 	headers := map[string]string{
 		"content-type": "application/json",
@@ -31,10 +31,7 @@ func StartTracer(serviceName, serviceVersion string) (*trace.TracerProvider, *me
 	traceExporter, err := otlptrace.New(
 		context.Background(),
 		otlptracehttp.NewClient(
-			otlptracehttp.WithEndpoint("localhost:4318"), // OTLP collector
-
-			// for production:
-			// otlptracehttp.WithEndpoint("otel-collector:4318"),
+			otlptracehttp.WithEndpoint("otel-collector:4318"), // OTLP collector
 
 			otlptracehttp.WithHeaders(headers),
 			otlptracehttp.WithInsecure(),
@@ -51,7 +48,7 @@ func StartTracer(serviceName, serviceVersion string) (*trace.TracerProvider, *me
 	// metric
 	metricExporter, err := otlpmetrichttp.New(
 		context.Background(),
-		otlpmetrichttp.WithEndpoint("localhost:4318"),
+		otlpmetrichttp.WithEndpoint("otel-collector:4318"),
 		otlpmetrichttp.WithInsecure(),
 	)
 	if err != nil {

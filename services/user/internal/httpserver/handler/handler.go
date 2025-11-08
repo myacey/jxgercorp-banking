@@ -21,6 +21,10 @@ const (
 	CtxKeyRetryAfter = "Retry-After"
 )
 
+type Config struct {
+	AppDomain string `mapstructure:"app_domain"`
+}
+
 type UserService interface {
 	ConfirmUserEmail(ctx context.Context, req *request.ConfirmUserEmail) (string, error)
 	CreateUser(ctx context.Context, req *request.Register) (*entity.User, error)
@@ -36,13 +40,16 @@ type Handler struct {
 
 	tracer trace.Tracer
 	// metrics telemetry.UserMetrics
+
+	cfg Config
 }
 
-func NewHandler(userSrv UserService) *Handler {
+func NewHandler(userSrv UserService, cfg Config) *Handler {
 	return &Handler{
 		userSrv: userSrv,
 		tracer:  otel.Tracer("handler"),
 		// metrics: metrics,
+		cfg: cfg,
 	}
 }
 

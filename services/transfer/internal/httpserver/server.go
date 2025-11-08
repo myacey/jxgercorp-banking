@@ -3,7 +3,6 @@ package httpserver
 import (
 	"context"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/myacey/jxgercorp-banking/services/libs/web"
@@ -54,15 +53,6 @@ func initialize(conn *pgxpool.Pool, queries *db.Queries) *App {
 	app.router = gin.Default()
 	app.router.ContextWithFallback = true
 	app.router.Use(handlr.TracingMiddleware())
-
-	// add CORS
-	app.router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:8080"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-	}))
 
 	app.router.POST("/api/v1/transfer", handlr.CreateTransfer)
 	app.router.GET("/api/v1/transfer", handlr.SearchTransfersWithAccount)

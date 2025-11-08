@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-    baseURL: 'http://localhost:80/api',
+    baseURL: '/api',
     timeout: 10000,
     headers: {'Content-Type': 'application/json'}
 });
@@ -82,7 +82,10 @@ export const createTransfer = async (createTrxData) => {
 
 export const confirmUserEmail = async (confirmParams) => {
     try {
-        const resp = await apiClient.post('v1/user/confirm', confirmParams);
+        const resp = await apiClient.get('v1/user/confirm', {
+                params: confirmParams
+            }
+        );
         console.log('confirm emial response:', resp)
         return resp.data;
     } catch(error) {

@@ -54,7 +54,15 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 
-	c.SetCookie(CookieAuth, token, secondsPerDay, "/", "localhost", false, false)
+	c.SetCookie(
+		CookieAuth,
+		token,
+		secondsPerDay,
+		"/",
+		h.cfg.AppDomain,
+		h.cfg.AppDomain != "localhost",
+		false,
+	)
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 

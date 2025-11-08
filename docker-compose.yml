@@ -1,7 +1,11 @@
 services:
+  # ==================================
+  # ============= INFRA =============
+  # =================================
   # PSQL-USER
   postgres-user:
     image: postgres:17-alpine
+    container_name: postgres-user
     environment:
       - POSTGRES_USER=${USER_POSTGRES_USER}
       - POSTGRES_PASSWORD=${USER_POSTGRES_PASSWORD}
@@ -15,7 +19,7 @@ services:
     ports:
       - "${USER_POSTGRES_PORT}:5432"
     networks:
-      - backend-net
+      - jxgercorp-net
     # volumes:
       # - ./services/db/data/:/var/lib/postgresql/data
     healthcheck:
@@ -23,11 +27,11 @@ services:
       interval: 5s
       timeout: 10s
       retries: 5
-      start_period: 10s
 
   # PSQL-TRANSFER
   postgres-transfer:
     image: postgres:17-alpine
+    container_name: postgres-transfer
     environment:
       - POSTGRES_USER=${TRANSFER_POSTGRES_USER}
       - POSTGRES_PASSWORD=${TRANSFER_POSTGRES_PASSWORD}
@@ -41,7 +45,7 @@ services:
     ports:
       - "${TRANSFER_POSTGRES_PORT}:5432"
     networks:
-      - backend-net
+      - jxgercorp-net
     # volumes:
       # - ./services/db/data/:/var/lib/postgresql/data
     healthcheck:
@@ -49,11 +53,11 @@ services:
       interval: 5s
       timeout: 10s
       retries: 5
-      start_period: 10s
 
   # REDIS-USER
   redis-user:
     image: redis:alpine
+    container_name: redis
     env_file: .env
     environment:
       - REDIS_PASSWORD=${USER_REDIS_PASSWORD}
@@ -73,70 +77,73 @@ services:
     ports:
       - "6379:6379" 
     networks:
-      - backend-net
+      - jxgercorp-net
     depends_on:
       postgres-user:
         condition: service_healthy
-  
+
   # MIGRATIONS
   migrate:
-    image: migrate/migrate
+    build:
+      context: .
+      dockerfile: ./services/migrate/Dockerfile
+    image: myacey/migrate:latest
+    container_name: migrate
     env_file: .env
-    networks:
-      - backend-net
-    volumes:
-      - ./services/user/db/migrations/:/migrations/user/
-      - ./services/transfer/db/migrations/:/migrations/transfer/
-    entrypoint: ["/bin/sh"]
-    command:
-      - "-c"
-      - |
-        set -e
+    command: |
+      /bin/sh -c '
+      set -e;
+      # first migrate the 'user' database
+      echo "Running user DB migrations...";
+      migrate \
+        -path /migrations/user \
+        -database "postgresql://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD:-invalid}@postgres-user:5432/${USER_POSTGRES_DB}?sslmode=disable" \
+        up;
 
-        # first migrate the "user" database
-        migrate \
-          -path /migrations/user \
-          -database "postgresql://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD:-invalid}@postgres-user:5432/${USER_POSTGRES_DB}?sslmode=disable" \
-          up
-
-        # then migrate the "transfer" database
-        migrate \
-          -path /migrations/transfer \
-          -database "postgresql://${TRANSFER_POSTGRES_USER}:${TRANSFER_POSTGRES_PASSWORD:-invalid}@postgres-transfer:5432/${TRANSFER_POSTGRES_DB}?sslmode=disable" \
-          up
+      # then migrate the "transfer" database
+      echo "Running transfer DB migrations..."
+      migrate \
+        -path /migrations/transfer \
+        -database "postgresql://${TRANSFER_POSTGRES_USER}:${TRANSFER_POSTGRES_PASSWORD:-invalid}@postgres-transfer:5432/${TRANSFER_POSTGRES_DB}?sslmode=disable" \
+        up
+      '
     depends_on:
       postgres-user:
         condition: service_healthy
       postgres-transfer:
         condition: service_healthy
+    networks:
+      - jxgercorp-net
 
   # KAFKA
   kafka:
     image: apache/kafka-native
+    container_name: kafka
     ports:
       - "9092:9092"
     environment:
       # Listeners
-      KAFKA_LISTENERS: CONTROLLER://localhost:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: HOST://localhost:9092,DOCKER://kafka:9093
+      KAFKA_LISTENERS: CONTROLLER://kafka:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: HOST://kafka:9092,DOCKER://kafka:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,HOST:PLAINTEXT,DOCKER:PLAINTEXT
-
       # KRaft
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9091
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9091
 
       # Broker-to-broker
       KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
 
       # Single-node
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - ./kafka-data:/tmp/kraft-combined-logs
     networks:
-      - backend-net
+      - jxgercorp-net
     extra_hosts:
       - "host.docker.internal:host-gateway"
-  
+
   # OTEL-COLLECTOR
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
@@ -148,7 +155,7 @@ services:
       - "4318:4318"
       - "9123:9123"
     networks:
-      - backend-net
+      - jxgercorp-net
     depends_on:
       - jaeger
       - prometheus
@@ -156,13 +163,14 @@ services:
   # JAEGER
   jaeger:
     image: jaegertracing/all-in-one:latest
+    container_name: jaeger
     ports:
       - "16686:16686"   # UI
       - "4317:4317"     # listen gRPC
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     networks:
-      - backend-net
+      - jxgercorp-net
 
   # PROMETHEUS
   prometheus:
@@ -177,8 +185,8 @@ services:
     ports:
       - "9090:9090"
     networks:
-      - backend-net
-    
+      - jxgercorp-net
+
   # GRAFANA
   grafana:
     image: grafana/grafana
@@ -192,7 +200,7 @@ services:
       - prometheus:prometheus
     user: ":"
     networks:
-      - backend-net
+      - jxgercorp-net
     
   # NODE-EXPORTER
   node-exporter:
@@ -210,27 +218,56 @@ services:
     ports:
       - 9100:9100
     networks:
-      - backend-net
+      - jxgercorp-net
     restart: always
     deploy:
       mode: global
 
+  frontend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./front
+      dockerfile: Dockerfile.dev
+    image: myacey/front:latest
+    container_name: frontend
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - "80:80"
+    volumes:
+      - ./front:/app
+      - /app/node_modules
+    networks:
+      - jxgercorp-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+  
+  # ==================================
+  # ============ SERVICE =============
+  # ==================================
   api-gateway:
     build:
       context: ./services
       dockerfile: Dockerfile.shared
       args:
         SERVICE: api-gateway
-        PORT: 80
-    ports:
-      - 80:80
+        PORT: 8080
+    image: myacey/api-gateway:latest
+    container_name: api-gateway
+    expose:
+      - "8080"
     # volumes:
       # - ../.env:/app/.env
     env_file:
       - .env
       - .env.docker
     networks:
-      - backend-net
+      - jxgercorp-net
 
   user-service:
     build:
@@ -239,17 +276,22 @@ services:
       args:
         SERVICE: user
         PORT: 8081
-    ports:
-      - 8081:8081
+    image: myacey/user-service:latest
+    container_name: user-service
+    expose:
+      - "8081"
     env_file:
       - .env
       - .env.docker
     networks:
-      - backend-net
+      - jxgercorp-net
     depends_on:
-      - postgres-user
-      - redis-user
-      - kafka
+      postgres-user:
+        condition: service_healthy
+      redis-user:
+        condition: service_started
+      kafka:
+        condition: service_started
 
   transfer-service:
     build:
@@ -258,16 +300,20 @@ services:
       args:
         SERVICE: transfer
         PORT: 8082
-    ports:
-      - 8082:8082
+    image: myacey/transfer-service:latest
+    container_name: transfer-service
+    expose:
+      - "8082"
     env_file:
       - .env
       - .env.docker
     networks:
-      - backend-net
+      - jxgercorp-net
     depends_on:
-      - postgres-transfer
-      - kafka
+      postgres-transfer:
+        condition: service_healthy
+      kafka:
+        condition: service_started
 
   token-service:
     build:
@@ -276,13 +322,15 @@ services:
       args:
         SERVICE: token
         PORT: 50051
-    ports:
-      - 50051:50051
+    image: myacey/token-service:latest
+    container_name: token-service
+    expose:
+      - "50051"
     env_file:
       - .env
       - .env.docker
     networks:
-      - backend-net
+      - jxgercorp-net
 
   notification-service:
     build:
@@ -290,13 +338,15 @@ services:
       dockerfile: Dockerfile.shared
       args:
         SERVICE: notification
+    image: myacey/notification-service:latest
+    container_name: notification-service
     env_file:
       - .env
       - .env.docker
       - .env.private
     networks:
-      - backend-net
+      - jxgercorp-net
 
 networks:
-  backend-net:
+  jxgercorp-net:
     driver: bridge

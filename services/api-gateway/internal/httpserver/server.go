@@ -4,7 +4,9 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/config"
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/httpserver/handler"
 	"github.com/myacey/jxgercorp-banking/services/api-gateway/internal/pkg/grpcclient"
@@ -42,6 +44,15 @@ func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientIm
 		Auth: *service.NewAuthService(grpcClient),
 	}
 
+	// add CORS
+	app.router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost", "http://localhost:8080"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
+
 	handl := handler.NewHandler(*app.service)
 	app.router.Use(handl.MetricsMiddleware())
 	app.router.Use(handl.TracingMiddleware())
@@ -61,6 +72,11 @@ func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientIm
 		public.Match(
 			[]string{http.MethodOptions, http.MethodGet},
 			"/confirm",
+			handl.ProxyHandler(cfg.Services["user-service"]),
+		)
+		public.Match(
+			[]string{http.MethodOptions, http.MethodGet},
+			"/balance",
 			handl.ProxyHandler(cfg.Services["user-service"]),
 		)
 	}

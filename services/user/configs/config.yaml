@@ -6,7 +6,7 @@ kafka:
   broker: ${KAFKA_NOTIF_URL}
   topic: "notif.email.register.confirm"
   partion: 0
-  write_deadline: 10
+  write_deadline: 100
 
 httpserver:
   listen: ":8081"
@@ -26,3 +26,10 @@ redis:
   index: 0
   pool_size: 1024
   min_idle_conn: 30
+
+confirmation:
+  app_protocol: ${APP_PROTOCOL}
+  app_domain: ${APP_DOMAIN}
+
+handler:
+  app_domain: ${APP_DOMAIN}

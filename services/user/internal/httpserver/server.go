@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 
@@ -63,26 +62,18 @@ func (app *App) initialize(
 
 	kafkaProducer := kafka.NewProducer(cfg.KafkaCfg)
 
-	confirmSrv := service.NewConfirmationService(confirmRepo, kafkaProducer)
+	confirmSrv := service.NewConfirmationService(confirmRepo, kafkaProducer, cfg.ConfirmationCfg)
 	hasherSrv := hasher.NewBcrypt()
 	app.service = &service.Service{
 		User: *service.NewUserSrv(usrRepo, *confirmSrv, grpcClient, hasherSrv),
 	}
 
-	handlr := handler.NewHandler(&app.service.User)
+	handlr := handler.NewHandler(&app.service.User, cfg.HandlerCfg)
 
 	app.router = gin.Default()
 	app.router.ContextWithFallback = true
 	app.router.Use(handlr.TracingMiddleware())
 
-	// add CORS
-	app.router.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:8080"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-	}))
 	app.router.POST("/api/v1/user/register", handlr.CreateUser)
 	app.router.POST("/api/v1/user/login", handlr.Login)
 	app.router.GET("/api/v1/user/confirm", handlr.ConfirmUserEmail)

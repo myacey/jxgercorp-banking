@@ -4,7 +4,11 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build --skip-plugins @vue/cli-plugin-eslint"
+    "build": "vue-cli-service build --skip-plugins @vue/cli-plugin-eslint",
+    "preview": "vite preview --host 0.0.0.0"
+  },
+  "devServer": {
+      "public": "0.0.0.0:80"
   },
   "dependencies": {
     "axios": "^1.7.9",

@@ -95,7 +95,7 @@ export default {
                 this.$router.push('/login'); // автоматический переход на /login
             } catch(err) {
                 console.log('Registration failed:', err);
-                this.error = err.data?.error?.message || 'Registration failed. Please try again';
+                this.error = err.data?.message || 'Registration failed. Please try again';
                 console.log('Extracted err message:', this.error)
             }
         },
@@ -147,9 +147,15 @@ export default {
 
 /* Ошибка */
 .error {
-    color: red;
+    color: white;
+    background-color: #e74c3c;
     margin: 10px 0;
     font-size: 14px;
     text-align: left;
+    padding: 8px 12px;
+    border-radius: 6px;
+    display: inline-block;
+    max-width: 100%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 </style>

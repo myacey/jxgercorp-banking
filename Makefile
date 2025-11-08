@@ -4,4 +4,4 @@ help:
 	@echo "make up	- start docker containers"
 
 up:
-	docker compose up --build -d
+	docker compose --profile dev up --build -d

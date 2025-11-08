@@ -2,7 +2,7 @@ grpcclient:
   target: ${TOKEN_SERVICE_URL}
 
 httpserver:
-  listen: ":80"
+  listen: ":8080"
 
 services:
   user-service: ${USER_SERVICE_URL}
