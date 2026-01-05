@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,7 +38,7 @@ func NewTransfer(conn *pgxpool.Pool, accountSrv *Account, repo TransferRepo) *Tr
 }
 
 func (s *Transfer) CreateTransfer(ctx context.Context, req *request.CreateTransfer) (*entity.Transfer, error) {
-	ctx, span := s.tracer.Start(ctx, "service: CreateAccount")
+	ctx, span := s.tracer.Start(ctx, "service: CreateTransfer")
 	defer span.End()
 
 	tx, err := s.conn.Begin(ctx)
@@ -53,6 +54,15 @@ func (s *Transfer) CreateTransfer(ctx context.Context, req *request.CreateTransf
 
 	if fromAccount.Balance-req.Amount < 0 {
 		return nil, apperror.NewBadReq("not enough money")
+	}
+
+	toAccount, err := s.accountSrv.GetAccountByID(ctx, req.ToAccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	if fromAccount.Currency != toAccount.Currency {
+		return nil, apperror.NewBadReq(fmt.Sprintf("not same currency: from %s to %s", fromAccount.Currency, toAccount.Currency))
 	}
 
 	transfer := &entity.Transfer{
@@ -78,11 +88,16 @@ func (s *Transfer) CreateTransfer(ctx context.Context, req *request.CreateTransf
 }
 
 func (s *Transfer) SearchTransfersWithAccount(ctx context.Context, req *request.SearchTransfersWithAccount) ([]*entity.Transfer, error) {
-	ctx, span := s.tracer.Start(ctx, "service: CreateAccount")
+	ctx, span := s.tracer.Start(ctx, "service: SearchTransfersWithAccount")
 	defer span.End()
 
+	accountID, err := uuid.Parse(req.AccountID)
+	if err != nil {
+		return nil, apperror.NewBadReq(fmt.Sprintf("invalid account id: %v", err))
+	}
+
 	arg := transferrepo.SearchTransfersWithAccountParams{
-		AccountID: req.AccountID,
+		AccountID: accountID,
 		Offset:    req.Offset,
 		Limit:     req.Limit,
 	}

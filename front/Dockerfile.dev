@@ -2,16 +2,12 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache bash git
-
-COPY front/package*.json front/yarn.lock* ./
-
+COPY package.json yarn.lock ./
 RUN yarn install
 
-COPY front/ .
+COPY . .
 
-COPY front/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 80
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]

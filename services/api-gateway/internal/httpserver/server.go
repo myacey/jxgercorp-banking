@@ -74,22 +74,27 @@ func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientIm
 			"/confirm",
 			handl.ProxyHandler(cfg.Services["user-service"]),
 		)
-		public.Match(
-			[]string{http.MethodOptions, http.MethodGet},
-			"/balance",
-			handl.ProxyHandler(cfg.Services["user-service"]),
-		)
 	}
 
 	protected := app.router.Group("/api/v1/transfer")
 	protected.Use(handl.AuthTokenMiddleware())
 	{
+		// GET - SearchTransfersWithAccount (list with offset and limit all transfer from/to account)
 		protected.Match(
-			[]string{http.MethodOptions, http.MethodGet, http.MethodPost},
+			[]string{http.MethodOptions, http.MethodGet},
+			"/accounts",
+			handl.ProxyHandler(cfg.Services["transfer-service"]),
+		)
+
+		// POST - CreateAccount (for person with some currency, RUB/EUR/USD/...)
+		protected.Match(
+			[]string{http.MethodOptions, http.MethodPost},
 			"/account",
 			handl.ProxyHandler(cfg.Services["transfer-service"]),
 		)
 
+		// POST - CreateTransfer (move money from one account to other)
+		// GET - SearchAccounts (list accounts of some user)
 		protected.Match(
 			[]string{http.MethodOptions, http.MethodGet, http.MethodPost},
 			"",

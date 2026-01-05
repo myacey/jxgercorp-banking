@@ -1,12 +1,68 @@
-.site-title {
-    font-size: 28px;
-    color: #2c3e50;
-    font-weight: bold;
-    margin-bottom: 20px;
+h1,
+h2,
+h3,
+p {
+    margin: 0;
+    color: white;
 }
 
-.form-title {
+
+h1 {
+    /* h1 */
+    font-family: 'Runic AltNo';
+    font-style: normal;
+    font-weight: 400;
+    font-size: 64px;
+}
+
+h2 {
+    /* h2 */
+    font-family: 'EB Garamond';
+    font-style: normal;
+    font-weight: 700;
+}
+
+h3 {
+    /* h3 */
+    font-family: 'EB Garamond';
+    font-style: normal;
+    font-weight: 400;
+}
+
+p {
+    /* base */
+    font-family: 'EB Garamond';
+    font-style: normal;
+    font-weight: 400;
+    font-size: 16px;
+}
+
+.base-text-runic {
+    /* base-runic */
+    font-family: 'Runic AltNo';
+    font-style: normal;
+    font-weight: 400;
     font-size: 20px;
-    color: #34495e;
-    margin-bottom: 15px;
+
+    color: white;
+}
+
+.small-text {
+    /* small */
+    font-family: 'EB Garamond';
+    font-style: normal;
+    font-weight: 400;
+    font-size: 14px;
+
+    color: white;
+}
+
+.very-small-text {
+    /* very small */
+    font-family: 'EB Garamond';
+    font-style: normal;
+    font-weight: 400;
+    font-size: 10px;
+
+    color: white;
 }

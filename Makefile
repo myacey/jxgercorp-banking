@@ -5,3 +5,6 @@ help:
 
 up:
 	docker compose --profile dev up --build -d
+
+front-lint:
+	cd front && ./node_modules/.bin/vue-cli-service lint --fix

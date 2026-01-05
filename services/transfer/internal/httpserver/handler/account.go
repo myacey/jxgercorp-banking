@@ -42,8 +42,8 @@ func (h *Handler) CreateAccount(c *gin.Context) {
 
 func (h *Handler) SearchAccounts(c *gin.Context) {
 	var req request.SearchAccounts
-	if err := c.ShouldBindJSON(&req); err != nil {
-		wrapCtxWithError(c, apperror.NewBadReq("invalid req: "+err.Error()))
+	if err := c.ShouldBindQuery(&req); err != nil {
+		wrapCtxWithError(c, apperror.NewBadReq("invalid query params: "+err.Error()))
 		return
 	}
 

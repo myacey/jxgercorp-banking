@@ -58,7 +58,7 @@ func initialize(conn *pgxpool.Pool, queries *db.Queries) *App {
 	app.router.GET("/api/v1/transfer", handlr.SearchTransfersWithAccount)
 
 	app.router.POST("/api/v1/transfer/account", handlr.CreateAccount)
-	app.router.GET("/api/v1/transfer/account", handlr.SearchAccounts)
+	app.router.GET("/api/v1/transfer/accounts", handlr.SearchAccounts)
 
 	return app
 }

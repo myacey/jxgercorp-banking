@@ -8,8 +8,8 @@ type CreateAccount struct {
 }
 
 type SearchAccounts struct {
-	Username string `json:"username" binding:"required"`
-	Currency string `json:"currency" binding:"omitempty"`
+	Username string `form:"username" binding:"required"`
+	Currency string `form:"currency" binding:"omitempty"`
 }
 
 type CreateTransfer struct {
@@ -19,9 +19,9 @@ type CreateTransfer struct {
 }
 
 type SearchTransfersWithAccount struct {
-	AccountID uuid.UUID `json:"account_id"`
-	Offset    int32     `json:"offset"`
-	Limit     int32     `json:"limit"`
+	AccountID string `form:"account_id" binding:"required,uuid"`
+	Offset    int32  `form:"offset" binding:"omitempty,min=0"`
+	Limit     int32  `form:"limit" binding:"omitempty,min=1,max=100"`
 }
 
 type AddAccountBalance struct {

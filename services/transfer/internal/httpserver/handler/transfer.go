@@ -50,11 +50,14 @@ func (h *Handler) CreateTransfer(c *gin.Context) {
 
 func (h *Handler) SearchTransfersWithAccount(c *gin.Context) {
 	var req request.SearchTransfersWithAccount
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindQuery(&req); err != nil {
 		wrapCtxWithError(c, apperror.NewBadReq("invalid req: "+err.Error()))
 		return
 	}
 
+	if req.Limit == 0 {
+		req.Limit = 100
+	}
 	transfers, err := h.transferSrv.SearchTransfersWithAccount(c, &req)
 	if err != nil {
 		wrapCtxWithError(c, err)

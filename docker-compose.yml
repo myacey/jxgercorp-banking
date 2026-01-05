@@ -138,7 +138,7 @@ services:
       # Single-node
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     volumes:
-      - ./kafka-data:/tmp/kraft-combined-logs
+      - ./services/kafka-data/:/tmp/kraft-combined-logs
     networks:
       - jxgercorp-net
     extra_hosts:
@@ -228,7 +228,6 @@ services:
     build:
       context: ./front
       dockerfile: Dockerfile.dev
-    image: myacey/front:latest
     container_name: frontend
     environment:
       - NODE_ENV=development

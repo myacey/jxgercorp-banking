@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -90,10 +91,10 @@ func (s *Account) GetAccountByID(ctx context.Context, id uuid.UUID) (*entity.Acc
 
 	account, err := s.repo.GetAccountByID(ctx, id)
 	if account == nil {
-		return nil, apperror.NewNotFound("account not found")
+		return nil, apperror.NewNotFound(fmt.Sprintf("account not found: %s", id))
 	}
 	if err != nil {
-		return nil, apperror.NewInternal("failed to get account", err)
+		return nil, apperror.NewInternal(fmt.Sprintf("failed to get account: %s", id), err)
 	}
 
 	return account, nil

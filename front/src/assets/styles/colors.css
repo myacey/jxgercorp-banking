@@ -1,0 +1,19 @@
+/* colors.css */
+:root {
+    /* brand */
+    --color-accent: #A83232;
+    --color-secondary: #F3F3F3;
+
+    /* text */
+    --color-text-primary: #F3F3F3;
+    --color-text-muted: #777777;
+
+
+    /* backgrounds */
+    --color-bg: #282828;
+    --color-bg-alt: #3A3A3A;
+
+    /* text */
+    --color-text: #000000;
+    --color-text-muted: #777777;
+}

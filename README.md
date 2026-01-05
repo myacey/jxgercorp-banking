@@ -10,6 +10,10 @@
   </a>
 </p>
 
+![app-architecture](https://github.com/user-attachments/assets/fa19ff84-b898-4274-a752-ed31eb87738c)
+
+
+
 ## Описание
 JXGERcorp Banking предоставляет пользователям следующие возможности:
 1. **Регистрация и подтверждение учетной записи**  

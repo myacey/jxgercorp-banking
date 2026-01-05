@@ -5,7 +5,7 @@ module.exports = {
     proxy: {
       '/api': {
         target: 'http://api-gateway:8080',
-        changeOrigin: true,
+        changeOrigin: true
       }
     },
     watchFiles: {
