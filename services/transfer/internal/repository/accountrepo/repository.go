@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/myacey/jxgercorp-banking/services/transfer/internal/models/entity"
 	"github.com/myacey/jxgercorp-banking/services/transfer/internal/repository"
 	db "github.com/myacey/jxgercorp-banking/services/transfer/internal/repository/sqlc"
@@ -42,7 +43,7 @@ func (r *PostgresAccount) CreateAccount(ctx context.Context, acc *entity.Account
 		ID:            acc.ID,
 		OwnerUsername: acc.OwnerUsername,
 		Balance:       acc.Balance,
-		Currency:      acc.Currency,
+		CurrencyCode:  acc.CurrencyCode,
 		CreatedAt:     acc.CreatedAt,
 	}
 	start := time.Now()
@@ -61,7 +62,7 @@ func (r *PostgresAccount) CreateAccount(ctx context.Context, acc *entity.Account
 		ID:            res.ID,
 		OwnerUsername: res.OwnerUsername,
 		Balance:       res.Balance,
-		Currency:      res.Currency,
+		CurrencyCode:  res.CurrencyCode,
 		CreatedAt:     res.CreatedAt,
 	}, nil
 }
@@ -71,8 +72,8 @@ func (r *PostgresAccount) SearchAccounts(ctx context.Context, p *SearchAccountsP
 	defer span.End()
 
 	arg := db.SearchAccountsParams{
-		Username: p.OwnerUsername,
-		Currency: db.NullCurrencyEnum{CurrencyEnum: db.CurrencyEnum(p.Currency), Valid: p.Currency != ""},
+		Username:     p.OwnerUsername,
+		CurrencyCode: pgtype.Text{String: p.Currency, Valid: p.Currency != ""},
 	}
 	start := time.Now()
 	res, err := r.store.SearchAccounts(ctx, arg)
@@ -92,7 +93,7 @@ func (r *PostgresAccount) SearchAccounts(ctx context.Context, p *SearchAccountsP
 			ID:            v.ID,
 			OwnerUsername: v.OwnerUsername,
 			Balance:       v.Balance,
-			Currency:      v.Currency,
+			CurrencyCode:  v.CurrencyCode,
 			CreatedAt:     v.CreatedAt,
 		}
 	}
@@ -120,9 +121,28 @@ func (r *PostgresAccount) GetAccountByID(ctx context.Context, id uuid.UUID) (*en
 		ID:            res.ID,
 		OwnerUsername: res.OwnerUsername,
 		Balance:       res.Balance,
-		Currency:      res.Currency,
+		CurrencyCode:  res.CurrencyCode,
 		CreatedAt:     res.CreatedAt,
 	}, nil
+}
+
+func (r *PostgresAccount) DeleteAccount(ctx context.Context, id uuid.UUID) error {
+	ctx, span := r.tracer.Start(ctx, "repository: DeleteAccount")
+	defer span.End()
+
+	start := time.Now()
+	_, err := r.store.DeleteAccount(ctx, id)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrAccountNotFound
+		default:
+			return err
+		}
+	}
+	span.SetAttributes(attribute.Float64("sql.time.ms", float64(time.Since(start).Milliseconds())))
+
+	return nil
 }
 
 func (r *PostgresAccount) AddAccountBalance(ctx context.Context, p *AddAccountBalance) (*entity.Account, error) {
@@ -149,7 +169,7 @@ func (r *PostgresAccount) AddAccountBalance(ctx context.Context, p *AddAccountBa
 		ID:            res.ID,
 		OwnerUsername: res.OwnerUsername,
 		Balance:       res.Balance,
-		Currency:      res.Currency,
+		CurrencyCode:  res.CurrencyCode,
 		CreatedAt:     res.CreatedAt,
 	}, nil
 }
@@ -181,10 +201,38 @@ func (r *PostgresAccount) AddTwoAccountsBalance(ctx context.Context, p *AddTwoAc
 			ID:            v.ID,
 			OwnerUsername: v.OwnerUsername,
 			Balance:       v.Balance,
-			Currency:      v.Currency,
+			CurrencyCode:  v.CurrencyCode,
 			CreatedAt:     v.CreatedAt,
 		}
 	}
 
 	return acc, nil
+}
+
+func (r *PostgresAccount) GetCurrencies(ctx context.Context) ([]*entity.Currency, error) {
+	ctx, span := r.tracer.Start(ctx, "repository: GetCurrencies")
+	defer span.End()
+
+	start := time.Now()
+	res, err := r.store.GetCurrencies(ctx)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return []*entity.Currency{}, nil
+		default:
+			return nil, err
+		}
+	}
+	span.SetAttributes(attribute.Float64("sql.time.ms", float64(time.Since(start).Milliseconds())))
+
+	currencies := make([]*entity.Currency, len(res))
+	for i, v := range res {
+		currencies[i] = &entity.Currency{
+			Code:      v.Code,
+			Symbol:    v.Symbol,
+			Precision: int(v.Precision),
+		}
+	}
+
+	return currencies, nil
 }

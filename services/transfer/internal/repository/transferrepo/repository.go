@@ -4,12 +4,15 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/myacey/jxgercorp-banking/services/transfer/internal/models/entity"
 	"github.com/myacey/jxgercorp-banking/services/transfer/internal/repository"
 	db "github.com/myacey/jxgercorp-banking/services/transfer/internal/repository/sqlc"
@@ -35,10 +38,13 @@ func (r *PostgresTranser) CraeteTransfer(ctx context.Context, req *entity.Transf
 	defer span.End()
 
 	arg := db.CreateTransferParams{
-		ID:            req.ID,
-		FromAccountID: req.FromAccountID,
-		ToAccountID:   req.ToAccountID,
-		Amount:        req.Amount,
+		ID:                  req.ID,
+		FromAccountID:       req.FromAccountID,
+		FromAccountUsername: req.FromAccountUsername,
+		ToAccountID:         req.ToAccountID,
+		ToAccountUsername:   req.ToAccountUsername,
+		Amount:              req.Amount,
+		CurrencyCode:        req.CurrencyCode,
 	}
 	start := time.Now()
 	res, err := r.store.CreateTransfer(ctx, arg)
@@ -53,11 +59,14 @@ func (r *PostgresTranser) CraeteTransfer(ctx context.Context, req *entity.Transf
 	span.SetAttributes(attribute.Float64("sql.time.ms", float64(time.Since(start).Microseconds())))
 
 	return &entity.Transfer{
-		ID:            res.ID,
-		FromAccountID: res.FromAccountID,
-		ToAccountID:   res.ToAccountID,
-		Amount:        res.Amount,
-		CreatedAt:     res.CreatedAt,
+		ID:                  res.ID,
+		FromAccountID:       res.FromAccountID,
+		FromAccountUsername: res.FromAccountUsername,
+		ToAccountID:         res.ToAccountID,
+		ToAccountUsername:   res.ToAccountUsername,
+		Amount:              res.Amount,
+		CreatedAt:           res.CreatedAt,
+		CurrencyCode:        res.CurrencyCode,
 	}, nil
 }
 
@@ -65,13 +74,26 @@ func (r *PostgresTranser) SearchTransfersWithAccount(ctx context.Context, req *S
 	ctx, span := r.tracer.Start(ctx, "repository: SearchTransfersWithAccount")
 	defer span.End()
 
-	arg := db.SearchTransfersWithAccountParams{
-		SearchAccount: req.AccountID,
-		Offset:        req.Offset,
-		Limit:         req.Limit,
+	arg := db.SearchTransfersParams{
+		CurrentAccountID: req.CurrentAccountID,
+		WithUsername: pgtype.Text{
+			String: req.WithUsername,
+			Valid:  req.WithUsername != "",
+		},
+		WithAccountID: pgtype.UUID{
+			Bytes: [16]byte(req.WithAccountID[:]),
+			Valid: req.WithAccountID != uuid.Nil,
+		},
+		Currency: pgtype.Text{
+			String: req.Currency,
+			Valid:  req.Currency != "",
+		},
+		Offset: req.Offset,
+		Limit:  req.Limit,
 	}
-	start := time.Now()
-	res, err := r.store.SearchTransfersWithAccount(ctx, arg)
+	fmt.Printf("%+v", arg)
+
+	res, err := r.store.SearchTransfers(ctx, arg)
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -80,18 +102,19 @@ func (r *PostgresTranser) SearchTransfersWithAccount(ctx context.Context, req *S
 			return nil, err
 		}
 	}
-	span.SetAttributes(attribute.Float64("sql.time.ms", float64(time.Since(start).Microseconds())))
 
-	acc := make([]*entity.Transfer, len(res))
+	transfers := make([]*entity.Transfer, len(res))
 	for i, v := range res {
-		acc[i] = &entity.Transfer{
-			ID:            v.ID,
-			FromAccountID: v.FromAccountID,
-			ToAccountID:   v.ToAccountID,
-			Amount:        v.Amount,
-			CreatedAt:     v.CreatedAt,
+		transfers[i] = &entity.Transfer{
+			ID:                  v.ID,
+			FromAccountID:       v.FromAccountID,
+			FromAccountUsername: v.FromAccountUsername,
+			ToAccountID:         v.ToAccountID,
+			ToAccountUsername:   v.ToAccountUsername,
+			Amount:              v.Amount,
+			CurrencyCode:        v.CurrencyCode,
+			CreatedAt:           v.CreatedAt,
 		}
 	}
-
-	return acc, nil
+	return transfers, nil
 }

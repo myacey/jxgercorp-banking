@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -52,7 +51,7 @@ func (s *Transfer) CreateTransfer(ctx context.Context, req *request.CreateTransf
 		return nil, err
 	}
 
-	if fromAccount.Balance-req.Amount < 0 {
+	if fromAccount.Balance-int64(req.Amount*100) < 0 {
 		return nil, apperror.NewBadReq("not enough money")
 	}
 
@@ -61,16 +60,18 @@ func (s *Transfer) CreateTransfer(ctx context.Context, req *request.CreateTransf
 		return nil, err
 	}
 
-	if fromAccount.Currency != toAccount.Currency {
-		return nil, apperror.NewBadReq(fmt.Sprintf("not same currency: from %s to %s", fromAccount.Currency, toAccount.Currency))
+	if fromAccount.CurrencyCode != toAccount.CurrencyCode {
+		return nil, apperror.NewBadReq(fmt.Sprintf("not same currency: from %s to %s", fromAccount.CurrencyCode, toAccount.CurrencyCode))
 	}
 
 	transfer := &entity.Transfer{
-		ID:            uuid.New(),
-		FromAccountID: req.FromAccountID,
-		ToAccountID:   req.ToAccountID,
-		Amount:        req.Amount,
-		CreatedAt:     time.Now(),
+		ID:                  uuid.New(),
+		FromAccountID:       req.FromAccountID,
+		FromAccountUsername: req.FromAccountUsername,
+		ToAccountID:         req.ToAccountID,
+		ToAccountUsername:   req.ToAccountUsername,
+		Amount:              int64(req.Amount * 100),
+		CurrencyCode:        req.Currency,
 	}
 
 	_, err = s.accountSrv.AddTwoAccountsBalance(ctx, req)
@@ -91,15 +92,26 @@ func (s *Transfer) SearchTransfersWithAccount(ctx context.Context, req *request.
 	ctx, span := s.tracer.Start(ctx, "service: SearchTransfersWithAccount")
 	defer span.End()
 
-	accountID, err := uuid.Parse(req.AccountID)
+	currentAccountID, err := uuid.Parse(req.CurrentAccountID)
 	if err != nil {
-		return nil, apperror.NewBadReq(fmt.Sprintf("invalid account id: %v", err))
+		return nil, apperror.NewBadReq(fmt.Sprintf("invalid account id: %v", req.CurrentAccountID))
+	}
+
+	withAccountID := uuid.Nil
+	if req.WithAccountID != "" {
+		withAccountID, err = uuid.Parse(req.WithAccountID)
+		if err != nil {
+			return nil, apperror.NewBadReq(fmt.Sprintf("invalid account id: %v", req.CurrentAccountID))
+		}
 	}
 
 	arg := transferrepo.SearchTransfersWithAccountParams{
-		AccountID: accountID,
-		Offset:    req.Offset,
-		Limit:     req.Limit,
+		CurrentAccountID: currentAccountID,
+		WithUsername:     req.WithUsername,
+		WithAccountID:    withAccountID,
+		Currency:         req.CurrencyCode,
+		Offset:           req.Offset,
+		Limit:            req.Limit,
 	}
 	transfers, err := s.repo.SearchTransfersWithAccount(ctx, &arg)
 	if err != nil {

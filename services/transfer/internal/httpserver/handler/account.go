@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 
@@ -16,6 +17,8 @@ import (
 type AccountService interface {
 	CreateAccount(ctx context.Context, req *request.CreateAccount) (*entity.Account, error)
 	SearchAccounts(ctx context.Context, req *request.SearchAccounts) ([]*entity.Account, error)
+	GetCurrencies(ctx context.Context) ([]*entity.Currency, error)
+	DeleteAccount(ctx context.Context, req *request.DeleteAccount) error
 }
 
 func (h *Handler) CreateAccount(c *gin.Context) {
@@ -55,6 +58,36 @@ func (h *Handler) SearchAccounts(c *gin.Context) {
 	}
 	resp := make([]*response.Account, len(accounts))
 	for i, v := range accounts {
+		resp[i] = v.ToResponse()
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+func (h *Handler) DeleteAccount(c *gin.Context) {
+	var req request.DeleteAccount
+	log.Print(req)
+	if err := c.ShouldBindQuery(&req); err != nil {
+		wrapCtxWithError(c, apperror.NewBadReq("invalid query params: "+err.Error()))
+		return
+	}
+	err := h.accountSrv.DeleteAccount(c, &req)
+	if err != nil {
+		wrapCtxWithError(c, err)
+		return
+	}
+
+	c.Status(http.StatusOK)
+}
+
+func (h *Handler) GetCurrencies(c *gin.Context) {
+	currencies, err := h.accountSrv.GetCurrencies(c)
+	if err != nil {
+		wrapCtxWithError(c, err)
+		return
+	}
+	resp := make([]*response.Currency, len(currencies))
+	for i, v := range currencies {
 		resp[i] = v.ToResponse()
 	}
 

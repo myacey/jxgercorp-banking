@@ -21,21 +21,15 @@ export default {
     accountID: {
       type: String,
       required: true
+    },
+    transactions: {
+      type: Array,
+      required: false,
     }
   },
 
   components: {
     TransactionDay
-  },
-
-  data() {
-    return {
-      transactions: [],
-    }
-  },
-
-  mounted() {
-    this.loadTransactions()
   },
 
   computed: {
@@ -51,7 +45,7 @@ export default {
 
         groups[date].push({
           amount: trx.amount,
-          user: this.resolveUser(trx),
+          username: this.resolveUser(trx),
           time: new Date(trx.createdAt).toLocaleString([], {
             hour: '2-digit',
             minute: '2-digit'
@@ -65,22 +59,8 @@ export default {
   },
 
   methods: {
-    async loadTransactions() {
-      try {
-        const params = {
-          account_id: this.accountID,
-          offset: 0,
-          limit: 20,
-        }
-
-        const resp = await fetchTransfers(params)
-        this.transactions = convertKeysToCamel(resp)
-      } catch (error) {
-        console.error("failed to fetch transactions")
-      }
-    },
     resolveUser(trx) {
-      return trx.fromAccountId == this.accountID ? trx.toAccountId : trx.fromAccountId
+      return trx.fromAccountId == this.accountID ? trx.toAccountUsername : trx.fromAccountUsername
     }
   }
 }
@@ -95,11 +75,15 @@ export default {
   justify-content: center;
   margin: auto 0;
   border: 1px solid rgba(40, 40, 40, 1);
+
+  min-height: 340px;
+  min-width: 220px;
 }
 
 .history-title {
   color: #fff;
   flex: 1;
+  align-self: stretch;
   text-align: center;
   font: 400 18px EB Garamond, -apple-system, Roboto, Helvetica, sans-serif;
   margin: 0;

@@ -79,7 +79,7 @@ func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientIm
 	protected := app.router.Group("/api/v1/transfer")
 	protected.Use(handl.AuthTokenMiddleware())
 	{
-		// GET - SearchTransfersWithAccount (list with offset and limit all transfer from/to account)
+		// GET - SearchAccounts (list accounts of some user)
 		protected.Match(
 			[]string{http.MethodOptions, http.MethodGet},
 			"/accounts",
@@ -87,17 +87,25 @@ func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientIm
 		)
 
 		// POST - CreateAccount (for person with some currency, RUB/EUR/USD/...)
+		// DELETE - DeleteAccount (delete account with specified ID)
 		protected.Match(
-			[]string{http.MethodOptions, http.MethodPost},
+			[]string{http.MethodOptions, http.MethodPost, http.MethodDelete},
 			"/account",
 			handl.ProxyHandler(cfg.Services["transfer-service"]),
 		)
 
 		// POST - CreateTransfer (move money from one account to other)
-		// GET - SearchAccounts (list accounts of some user)
+		// GET - SearchTransfersWithAccount (list with offset and limit all transfer from/to account)
 		protected.Match(
 			[]string{http.MethodOptions, http.MethodGet, http.MethodPost},
 			"",
+			handl.ProxyHandler(cfg.Services["transfer-service"]),
+		)
+
+		// GET - GetCurrencies(get list of available currencies)
+		protected.Match(
+			[]string{http.MethodOptions, http.MethodGet},
+			"/currencies",
 			handl.ProxyHandler(cfg.Services["transfer-service"]),
 		)
 	}

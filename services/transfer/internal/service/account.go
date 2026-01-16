@@ -17,14 +17,17 @@ import (
 )
 
 // start balance of user account.
-const accountStartBalance = 1000
+const accountStartBalance = 100000
 
 type AccountRepo interface {
 	CreateAccount(ctx context.Context, acc *entity.Account) (*entity.Account, error)
 	GetAccountByID(ctx context.Context, id uuid.UUID) (*entity.Account, error)
 	SearchAccounts(ctx context.Context, p *accountrepo.SearchAccountsParams) ([]*entity.Account, error)
+	DeleteAccount(ctx context.Context, id uuid.UUID) error
 
 	AddTwoAccountsBalance(ctx context.Context, p *accountrepo.AddTwoAccountsBalance) ([]*entity.Account, error)
+
+	GetCurrencies(ctx context.Context) ([]*entity.Currency, error)
 }
 
 type Account struct {
@@ -48,7 +51,7 @@ func (s *Account) CreateAccount(ctx context.Context, req *request.CreateAccount)
 		ID:            uuid.New(),
 		OwnerUsername: req.OwnerUsername,
 		Balance:       accountStartBalance,
-		Currency:      entity.Currency(req.Currency),
+		CurrencyCode:  req.Currency,
 		CreatedAt:     time.Now(),
 	}
 	account, err := s.repo.CreateAccount(ctx, arg)
@@ -70,7 +73,7 @@ func (s *Account) SearchAccounts(ctx context.Context, req *request.SearchAccount
 
 	arg := accountrepo.SearchAccountsParams{
 		OwnerUsername: req.Username,
-		Currency:      entity.Currency(req.Currency),
+		Currency:      req.Currency,
 	}
 	accounts, err := s.repo.SearchAccounts(ctx, &arg)
 	if err != nil {
@@ -100,6 +103,28 @@ func (s *Account) GetAccountByID(ctx context.Context, id uuid.UUID) (*entity.Acc
 	return account, nil
 }
 
+func (s *Account) DeleteAccount(ctx context.Context, req *request.DeleteAccount) error {
+	ctx, span := s.tracer.Start(ctx, "service: DeleteAccount")
+	defer span.End()
+
+	id, err := uuid.Parse(req.AccountID)
+	if err != nil {
+		return apperror.NewBadReq(fmt.Sprintf("invalid account id: %s", id))
+	}
+
+	err = s.repo.DeleteAccount(ctx, id)
+	if err != nil {
+		switch err {
+		case accountrepo.ErrAccountNotFound:
+			return apperror.NewBadReq(fmt.Sprintf("account not found: %s", req.AccountID))
+		default:
+			return apperror.NewInternal("failed to delete account", err)
+		}
+	}
+
+	return nil
+}
+
 func (s *Account) AddTwoAccountsBalance(ctx context.Context, req *request.CreateTransfer) ([]*entity.Account, error) {
 	ctx, span := s.tracer.Start(ctx, "service: AddTwoAccountsBalance")
 	defer span.End()
@@ -107,7 +132,7 @@ func (s *Account) AddTwoAccountsBalance(ctx context.Context, req *request.Create
 	arg := accountrepo.AddTwoAccountsBalance{
 		FromAccountID: req.FromAccountID,
 		ToAccountUD:   req.ToAccountID,
-		Amount:        req.Amount,
+		Amount:        int64(req.Amount * 100),
 	}
 	accounts, err := s.repo.AddTwoAccountsBalance(ctx, &arg)
 	if err != nil {
@@ -115,4 +140,16 @@ func (s *Account) AddTwoAccountsBalance(ctx context.Context, req *request.Create
 	}
 
 	return accounts, nil
+}
+
+func (s *Account) GetCurrencies(ctx context.Context) ([]*entity.Currency, error) {
+	ctx, span := s.tracer.Start(ctx, "service: SearchAccounts")
+	defer span.End()
+
+	currencies, err := s.repo.GetCurrencies(ctx)
+	if err != nil {
+		return nil, apperror.NewInternal("failed to get accounts", err)
+	}
+
+	return currencies, nil
 }

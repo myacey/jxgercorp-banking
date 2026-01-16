@@ -1,9 +1,7 @@
 <template>
   <div class="transfer-block">
     <div class="action-buttons">
-      <div class="button-wrapper">
-        <button class="new-transfer-btn">new transfer</button>
-      </div>
+      <div class="new-transfer-btn btn" @click="$emit('new-transfer')">new transfer</div>
     </div>
     <div class="balance-amount">{{ formattedBalance }}</div>
     <div class="account-name">{{ username }}</div>
@@ -74,7 +72,7 @@ export default {
   color: var(--Secondary-Color, #f3f3f3);
 }
 
-.button-wrapper {
+.new-transfer-btn {
   border-radius: 15px;
   display: flex;
   flex-direction: column;
@@ -82,36 +80,18 @@ export default {
   justify-content: center;
   background-color: var(--Primary-Color, #a83232);
   padding: 4px 13px;
-}
 
-@media (max-width: 991px) {
-  .button-wrapper {
-    padding: 0 20px;
-  }
-}
-
-.new-transfer-btn {
   color: var(--Secondary-Color, #f3f3f3);
-  background: none;
-  border: none;
-  font: inherit;
-  cursor: pointer;
-  padding: 0;
 }
 
-.new-transfer-btn:hover {
-  opacity: 0.9;
-}
 
 .balance-amount {
   color: #fff;
   font-size: 24px;
   font-weight: 700;
-  margin-top: 6px;
 }
 
 .account-name {
   color: #a83232;
-  margin-top: 6px;
 }
 </style>

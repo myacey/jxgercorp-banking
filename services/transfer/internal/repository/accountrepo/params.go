@@ -2,12 +2,11 @@ package accountrepo
 
 import (
 	"github.com/google/uuid"
-	"github.com/myacey/jxgercorp-banking/services/transfer/internal/models/entity"
 )
 
 type SearchAccountsParams struct {
 	OwnerUsername string
-	Currency      entity.Currency
+	Currency      string
 }
 
 type AddAccountBalance struct {

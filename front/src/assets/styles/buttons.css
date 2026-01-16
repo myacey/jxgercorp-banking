@@ -1,27 +1,8 @@
 .btn {
-    padding: 10px 20px;
-    font-size: 16px;
-    border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.btn-primary {
-    background-color: #3498db;
-    color: #fff;
-    border: none;
-}
-
-.btn-primary:hover {
-    background-color: #2980b9;
-}
-
-.btn-secondary {
-    background-color: #95a5a6;
-    color: #fff;
-    border: none;
-}
-
-.btn-secondary:hover {
-    background-color: #7f8c8d;
+.btn:hover {
+    opacity: 0.8;
 }

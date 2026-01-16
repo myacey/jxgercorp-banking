@@ -14,9 +14,6 @@ sql:
       - db_type: "timestamptz"
         go_type: "time.Time"
 
-      - db_type: "currency_enum"
-        go_type: "github.com/myacey/jxgercorp-banking/services/transfer/internal/models/entity.Currency"
-
       - db_type: "uuid"
         go_type:
             import: "github.com/google/uuid"

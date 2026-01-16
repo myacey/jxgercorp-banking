@@ -3,7 +3,10 @@ package transferrepo
 import "github.com/google/uuid"
 
 type SearchTransfersWithAccountParams struct {
-	AccountID uuid.UUID
-	Offset    int32
-	Limit     int32
+	CurrentAccountID uuid.UUID
+	WithUsername     string
+	WithAccountID    uuid.UUID
+	Currency         string
+	Offset           int32
+	Limit            int32
 }

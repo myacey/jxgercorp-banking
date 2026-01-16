@@ -1,13 +1,20 @@
 <template>
-    <div class="account-dropdown" @click="$emit('click')">
-        <p class="selector-text">account</p>
-        <p>▼</p>
+    <div class="account-dropdown btn" @click="$emit('click')">
+        <span class="arrow" :class="{ open }">▶</span>
+        <span class="base-text selector-text">account</span>
     </div>
 </template>
 
 <script>
 export default {
-    name: 'AccountDropdown'
+    name: 'AccountDropdown',
+
+    props: {
+        open: {
+            type: Boolean,
+            default: false
+        }
+    }
 };
 </script>
 
@@ -16,12 +23,26 @@ export default {
 .account-dropdown {
     display: flex;
     flex-direction: row;
-    gap: 5px;
+    gap: 2px;
 
+    align-items: center;
     cursor: pointer;
 }
 
-.account-dropdown:hover {
-    opacity: 0.8;
+.arrow {
+    vertical-align: baseline;
+    display: inline-block;
+    transition: transform 0.25s ease;
+
+    font-size: 10px;
+    color: white;
+}
+
+.arrow.open {
+    transform: rotate(180deg);
+}
+
+.selector-text {
+    vertical-align: baseline;
 }
 </style>

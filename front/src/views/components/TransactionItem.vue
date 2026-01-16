@@ -4,8 +4,8 @@
       {{ type == 'positive' ? '+' : '-' }}{{ amount }}
     </div>
     <div class="transaction-details">
-      <p class="user-name">{{ user }}</p>
-      <p class="user-date-divider"> | </p>
+      <p class="username">{{ username }}</p>
+      <p class="username-date-divider"> | </p>
       <p class="very-small-text transaction-time ">{{ time }}</p>
     </div>
   </div>
@@ -20,7 +20,7 @@ export default {
       required: false,
       default: '0.00'
     },
-    user: {
+    username: {
       type: String,
       required: false,
       default: 'unknown'
@@ -76,14 +76,14 @@ export default {
 }
 
 
-.user-name {
+.username {
   font-size: 16px;
   align-self: center;
   min-width: 0px;
   white-space: nowrap;
 }
 
-.user-date-divider {
+.username-date-divider {
   align-self: center;
   white-space: nowrap;
 

@@ -10,7 +10,7 @@
         alt="Date indicator" class="date-icon" />
     </div>
     <TransactionItem v-for="(transaction, index) in transactions" :key="index" :amount="transaction.amount"
-      :user="transaction.user" :time="transaction.time" :type="transaction.type" />
+      :username="transaction.username" :time="transaction.time" :type="transaction.type" />
     <div v-if="showSeeMore" class="see-more-container">
       <button class="see-more-btn">see more</button>
       <img

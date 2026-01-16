@@ -12,19 +12,29 @@ type SearchAccounts struct {
 	Currency string `form:"currency" binding:"omitempty"`
 }
 
+type DeleteAccount struct {
+	AccountID string `form:"account_id" binding:"required"`
+}
+
 type CreateTransfer struct {
-	FromAccountID uuid.UUID `json:"from_account_id"`
-	ToAccountID   uuid.UUID `json:"to_account_id"`
-	Amount        int64     `json:"amount"`
+	FromAccountID       uuid.UUID `json:"from_account_id" binding:"required"`
+	FromAccountUsername string    `json:"from_account_username" binding:"required"`
+	ToAccountID         uuid.UUID `json:"to_account_id" binding:"required"`
+	ToAccountUsername   string    `json:"to_account_username" binding:"required"`
+	Amount              float64   `json:"amount" binding:"required"`
+	Currency            string    `json:"currency" binding:"required"`
 }
 
 type SearchTransfersWithAccount struct {
-	AccountID string `form:"account_id" binding:"required,uuid"`
-	Offset    int32  `form:"offset" binding:"omitempty,min=0"`
-	Limit     int32  `form:"limit" binding:"omitempty,min=1,max=100"`
+	CurrentAccountID string `form:"current_account_id" binding:"required,uuid"`
+	WithUsername     string `form:"with_username" binding:"omitempty"`
+	WithAccountID    string `form:"with_account_id" binding:"omitempty"`
+	CurrencyCode     string `form:"currency" binding:"omitempty"`
+	Offset           int32  `form:"offset" binding:"omitempty,min=0"`
+	Limit            int32  `form:"limit" binding:"omitempty,min=1,max=100"`
 }
 
 type AddAccountBalance struct {
 	ID         uuid.UUID `json:"account_id"`
-	AddBalance int64     `json:"add_balance"`
+	AddBalance float64   `json:"add_balance"`
 }

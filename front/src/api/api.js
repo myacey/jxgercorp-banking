@@ -16,6 +16,8 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
+// -------------- USERS --------------
+
 export const registerUser = async (userData) => {
   try {
     const response = await apiClient.post("v1/user/register", userData);
@@ -46,6 +48,25 @@ export const loginUser = async (userData) => {
   }
 };
 
+export const confirmUserEmail = async (confirmParams) => {
+  try {
+    const resp = await apiClient.get("v1/user/confirm", {
+      params: confirmParams,
+    });
+    console.log("confirm emial response:", resp);
+    return resp.data;
+  } catch (error) {
+    console.log("cant confirm account:", error);
+    throw (
+      error.response || {
+        data: { error: { message: "Unknown error occured" } },
+      }
+    );
+  }
+};
+
+// -------------- ACCOUNTS --------------
+
 export const fetchAccounts = async (data) => {
   try {
     const response = await apiClient.get("v1/transfer/accounts", {
@@ -62,6 +83,41 @@ export const fetchAccounts = async (data) => {
     );
   }
 };
+
+export const createAccount = async (data) => {
+  try {
+    const response = await apiClient.post("v1/transfer/account", data, {
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.log("cant create account:", error);
+    throw (
+      error.response || {
+        data: { error: { message: "Unknown error occured" } },
+      }
+    );
+  }
+};
+
+export const deleteAccount = async (data) => {
+  try {
+    const response = await apiClient.delete("v1/transfer/account", {
+      params: data,
+      withCredentials: true,
+    });
+    return response.data;
+  } catch (error) {
+    console.log("cant delete account:", error);
+    throw (
+      error.response || {
+        data: { error: { message: "Unknown error occured" } },
+      }
+    );
+  }
+};
+
+// -------------- TRANSFERS --------------
 
 export const fetchTransfers = async (data) => {
   try {
@@ -80,45 +136,31 @@ export const fetchTransfers = async (data) => {
   }
 };
 
-export const createTransfer = async (createTrxData) => {
+export const createTransfer = async (data) => {
   try {
-    const response = await apiClient.post("v1/transfer/create", createTrxData, {
+    const response = await apiClient.post("v1/transfer", data, {
       withCredentials: true,
     });
-    console.log("create trx response:", response);
     return response.data;
   } catch (error) {
     console.log("cant create trx:", error);
     throw (
       error.response || {
-        data: { error: { message: "Unknown error occured" } },
+        data: { message: "Unknown error occured" },
       }
     );
   }
 };
 
-// export const searchEntries = async (trxSearchData) => {
-//     try {
-//         const response = await apiClient.get('v1/transfer/', trxSearchData, {
-//             withCredentials: true,
-//         });
-//         console.log('search trx response:', response);
-//         return response.data;
-//     } catch(error) {
-//         // console.log('cant search trx:', error.response?.data)
-//         // throw error.response || { data: { error: { message: 'Unknown error occured' }  } }
-//     }
-// };
-
-export const confirmUserEmail = async (confirmParams) => {
+export const fetchCurrencies = async () => {
   try {
-    const resp = await apiClient.get("v1/user/confirm", {
-      params: confirmParams,
+    const response = await apiClient.get("v1/transfer/currencies", {
+      withCredentials: true,
     });
-    console.log("confirm emial response:", resp);
-    return resp.data;
+    console.log("fetched currencies:", response.data);
+    return response.data;
   } catch (error) {
-    console.log("cant confirm account:", error);
+    console.log("failed to fetch currencies:", error);
     throw (
       error.response || {
         data: { error: { message: "Unknown error occured" } },
