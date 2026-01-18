@@ -1,0 +1,8 @@
+httpserver:
+  listen: ":8082"
+
+postgres:
+  host: ${TRANSFER_POSTGRES_HOST}
+  port: ${TRANSFER_POSTGRES_PORT}
+  user: postgres
+  db_name: jxger_bank

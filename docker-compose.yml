@@ -1,0 +1,351 @@
+services:
+  # ==================================
+  # ============= INFRA =============
+  # =================================
+  # PSQL-USER
+  postgres-user:
+    image: postgres:17-alpine
+    container_name: postgres-user
+    environment:
+      - POSTGRES_USER=${USER_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${USER_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${USER_POSTGRES_DB}
+    command: > 
+      -c 'max_connections=600'
+      && -c 'shared_buffers=120MB'
+      && -c 'tcp_keepalives_idle = 30'
+      && -c 'tcp_keepalives_interval = 10'
+      && -c 'tcp_keepalives_count = 5'
+    ports:
+      - "${USER_POSTGRES_PORT}:5432"
+    networks:
+      - jxgercorp-net
+    # volumes:
+      # - ./services/db/data/:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${USER_POSTGRES_USER} -d ${USER_POSTGRES_DB}'"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  # PSQL-TRANSFER
+  postgres-transfer:
+    image: postgres:17-alpine
+    container_name: postgres-transfer
+    environment:
+      - POSTGRES_USER=${TRANSFER_POSTGRES_USER}
+      - POSTGRES_PASSWORD=${TRANSFER_POSTGRES_PASSWORD}
+      - POSTGRES_DB=${TRANSFER_POSTGRES_DB}
+    command: > 
+      -c 'max_connections=600'
+      && -c 'shared_buffers=120MB'
+      && -c 'tcp_keepalives_idle = 30'
+      && -c 'tcp_keepalives_interval = 10'
+      && -c 'tcp_keepalives_count = 5'
+    ports:
+      - "${TRANSFER_POSTGRES_PORT}:5432"
+    networks:
+      - jxgercorp-net
+    # volumes:
+      # - ./services/db/data/:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${TRANSFER_POSTGRES_USER} -d ${TRANSFER_POSTGRES_DB}'"]
+      interval: 5s
+      timeout: 10s
+      retries: 5
+
+  # REDIS-USER
+  redis-user:
+    image: redis:alpine
+    container_name: redis
+    env_file: .env
+    environment:
+      - REDIS_PASSWORD=${USER_REDIS_PASSWORD}
+      - REDIS_USER_PASSWORD=${USER_REDIS_PASSWORD}
+      - REDIS_DATABASE=${USER_REDIS_INDEX}
+    command: >
+      sh -c '
+        mkdir -p /usr/local/etc/redis &&
+        echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+        echo "requirepass ${USER_REDIS_PASSWORD}" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+        echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
+        echo "user ${USER_REDIS_USER} on >${USER_REDIS_PASSWORD} ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+      '
+    ports:
+      - "6379:6379" 
+    networks:
+      - jxgercorp-net
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+
+  # MIGRATIONS
+  migrate:
+    build:
+      context: .
+      dockerfile: ./services/migrate/Dockerfile
+    image: myacey/migrate:latest
+    container_name: migrate
+    env_file: .env
+    command: |
+      /bin/sh -c '
+      set -e;
+      # first migrate the 'user' database
+      echo "Running user DB migrations...";
+      migrate \
+        -path /migrations/user \
+        -database "postgresql://${USER_POSTGRES_USER}:${USER_POSTGRES_PASSWORD:-invalid}@postgres-user:5432/${USER_POSTGRES_DB}?sslmode=disable" \
+        up;
+
+      # then migrate the "transfer" database
+      echo "Running transfer DB migrations..."
+      migrate \
+        -path /migrations/transfer \
+        -database "postgresql://${TRANSFER_POSTGRES_USER}:${TRANSFER_POSTGRES_PASSWORD:-invalid}@postgres-transfer:5432/${TRANSFER_POSTGRES_DB}?sslmode=disable" \
+        up
+      '
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      postgres-transfer:
+        condition: service_healthy
+    networks:
+      - jxgercorp-net
+
+  # KAFKA
+  kafka:
+    image: apache/kafka-native
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # Listeners
+      KAFKA_LISTENERS: CONTROLLER://kafka:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: HOST://kafka:9092,DOCKER://kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,HOST:PLAINTEXT,DOCKER:PLAINTEXT
+      # KRaft
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9091
+
+      # Broker-to-broker
+      KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
+
+      # Single-node
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - ./services/kafka-data/:/tmp/kraft-combined-logs
+    networks:
+      - jxgercorp-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # OTEL-COLLECTOR
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./services/monitoring/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    ports:
+      - "4318:4318"
+      - "9123:9123"
+    networks:
+      - jxgercorp-net
+    depends_on:
+      - jaeger
+      - prometheus
+
+  # JAEGER
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: jaeger
+    ports:
+      - "16686:16686"   # UI
+      - "4317:4317"     # listen gRPC
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    networks:
+      - jxgercorp-net
+
+  # PROMETHEUS
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    command: >
+      --config.file=/etc/prometheus/prometheus.yml
+      && --web.enable-remote-write-receiver
+      && --web.enable-otlp-receiver
+    volumes:
+      - ./services/monitoring/prometheus/:/etc/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - jxgercorp-net
+
+  # GRAFANA
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    volumes:
+      - ./services/monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./services/monitoring/grafana/provisioning:/etc/grafana/provisioning/
+    ports:
+      - 3000:3000
+    links:
+      - prometheus:prometheus
+    user: ":"
+    networks:
+      - jxgercorp-net
+    
+  # NODE-EXPORTER
+  node-exporter:
+    image: prom/node-exporter
+    container_name: exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --collector.filesystem.ignored-mount-points
+      - ^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)
+    ports:
+      - 9100:9100
+    networks:
+      - jxgercorp-net
+    restart: always
+    deploy:
+      mode: global
+
+  frontend-dev:
+    profiles: ["dev"]
+    build:
+      context: ./front
+      dockerfile: Dockerfile.dev
+    container_name: frontend
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    ports:
+      - "80:80"
+    volumes:
+      - ./front:/app
+      - /app/node_modules
+    networks:
+      - jxgercorp-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+  
+  # ==================================
+  # ============ SERVICE =============
+  # ==================================
+  api-gateway:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.shared
+      args:
+        SERVICE: api-gateway
+        PORT: 8080
+    image: myacey/api-gateway:latest
+    container_name: api-gateway
+    expose:
+      - "8080"
+    # volumes:
+      # - ../.env:/app/.env
+    env_file:
+      - .env
+      - .env.docker
+    networks:
+      - jxgercorp-net
+
+  user-service:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.shared
+      args:
+        SERVICE: user
+        PORT: 8081
+    image: myacey/user-service:latest
+    container_name: user-service
+    expose:
+      - "8081"
+    env_file:
+      - .env
+      - .env.docker
+    networks:
+      - jxgercorp-net
+    depends_on:
+      postgres-user:
+        condition: service_healthy
+      redis-user:
+        condition: service_started
+      kafka:
+        condition: service_started
+
+  transfer-service:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.shared
+      args:
+        SERVICE: transfer
+        PORT: 8082
+    image: myacey/transfer-service:latest
+    container_name: transfer-service
+    expose:
+      - "8082"
+    env_file:
+      - .env
+      - .env.docker
+    networks:
+      - jxgercorp-net
+    depends_on:
+      postgres-transfer:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
+  token-service:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.shared
+      args:
+        SERVICE: token
+        PORT: 50051
+    image: myacey/token-service:latest
+    container_name: token-service
+    expose:
+      - "50051"
+    env_file:
+      - .env
+      - .env.docker
+    networks:
+      - jxgercorp-net
+
+  notification-service:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.shared
+      args:
+        SERVICE: notification
+    image: myacey/notification-service:latest
+    container_name: notification-service
+    env_file:
+      - .env
+      - .env.docker
+      - .env.private
+    networks:
+      - jxgercorp-net
+
+networks:
+  jxgercorp-net:
+    driver: bridge

@@ -1,0 +1,35 @@
+grpcclient:
+  target: ${TOKEN_SERVICE_URL}
+
+kafka:
+  network: "tcp"
+  broker: ${KAFKA_NOTIF_URL}
+  topic: "notif.email.register.confirm"
+  partion: 0
+  write_deadline: 100
+
+httpserver:
+  listen: ":8081"
+
+postgres:
+  host: ${USER_POSTGRES_HOST}
+  port: ${USER_POSTGRES_PORT}
+  user: postgres
+  password: ${USER_POSTGRES_PASSWORD}
+  db_name: jxger_bank
+
+redis:
+  host: ${USER_REDIS_HOST}
+  port: 6379
+  password: ${USER_REDIS_PASSWORD}
+  # adress: localhost:6379
+  index: 0
+  pool_size: 1024
+  min_idle_conn: 30
+
+confirmation:
+  app_protocol: ${APP_PROTOCOL}
+  app_domain: ${APP_DOMAIN}
+
+handler:
+  app_domain: ${APP_DOMAIN}

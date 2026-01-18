@@ -1,27 +1,43 @@
-.btn {
-    padding: 10px 20px;
-    font-size: 16px;
-    border-radius: 5px;
+button,
+input[type="submit"],
+input[type="reset"] {
+    background: none;
+    color: inherit;
+    border: none;
+    padding: 0;
+    font: inherit;
     cursor: pointer;
+    outline: inherit;
     transition: background-color 0.3s ease, color 0.3s ease;
+
+    color: white;
+    font-family: 'EB Garamond';
+    font-style: normal;
+    font-weight: 400;
 }
 
-.btn-primary {
-    background-color: #3498db;
-    color: #fff;
-    border: none;
+.primary-btn {
+    background-color: var(--color-accent);
+    border-radius: 10px;
+    text-align: center;
+    align-items: center;
+    padding: 1px 7px;
 }
 
-.btn-primary:hover {
-    background-color: #2980b9;
+.secondary-btn {
+    border: 1px solid var(--color-text-muted);
+    border-radius: 10px;
+    text-align: center;
+    align-items: center;
+    color: white;
+    padding: 1px 7px;
 }
 
-.btn-secondary {
-    background-color: #95a5a6;
-    color: #fff;
-    border: none;
-}
-
-.btn-secondary:hover {
-    background-color: #7f8c8d;
+.muted-btn {
+    border: 1px solid var(--color-text-muted);
+    border-radius: 10px;
+    text-align: center;
+    align-items: center;
+    color: var(--color-text-muted);
+    padding: 1px 7px;
 }

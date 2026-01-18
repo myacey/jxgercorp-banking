@@ -1,41 +1,49 @@
 package main
 
 import (
-	"sync"
+	"context"
+	"flag"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"github.com/myacey/jxgercorp-banking/services/notification/internal/controller"
-	"github.com/myacey/jxgercorp-banking/services/notification/internal/sendmail"
-	"github.com/myacey/jxgercorp-banking/services/shared/backconfig"
-	"github.com/myacey/jxgercorp-banking/services/shared/logging"
-	"gopkg.in/gomail.v2"
+	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
+	"github.com/myacey/jxgercorp-banking/services/notification/internal/adapter/inbound/kafka"
+	"github.com/myacey/jxgercorp-banking/services/notification/internal/adapter/outbound/smtp"
+	"github.com/myacey/jxgercorp-banking/services/notification/internal/application/service"
+	"github.com/myacey/jxgercorp-banking/services/notification/internal/config"
 )
 
+var cfgPath = flag.String("f", "./configs/config.yaml", "path to the transfer config")
+
 func main() {
-	cfg, err := backconfig.LoadConfig(".")
+	flag.Parse()
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	// config
+	cfg, err := config.LoadConfig(*cfgPath)
 	if err != nil {
-		panic(err)
+		log.Fatal("cannot load config:", err)
 	}
 
-	logger, err := logging.ConfigureLogger()
+	// tracer for Telemetry (Jaeger)
+	_, _, err = telemetry.StartTracer("notif-microservice", "0.0.1")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	defer logger.Sync()
+	// _ = telemetry.NewMetricsFactory("notif-microservice")
 
-	dialerConn := gomail.NewDialer("smtp.gmail.com", 587, cfg.GoogleMailAdress, cfg.GoogleAppPassword)
-	mailSender := sendmail.NewMailSender(cfg.GoogleMailAdress, dialerConn, logger)
+	sender := smtp.NewSender(cfg.SMTPConfig)
+	usecase := service.NewNotificationService(sender)
+	consumer := kafka.NewConsumer(cfg.KafkaConfig, usecase)
 
-	ctrller := controller.NewController(mailSender, &controller.RegisterEmailKafka{KafkaTopic: "notif.email.register.confirm", KafkaPartion: 0}, cfg.AppDomain)
+	consumer.Start(ctx)
+	log.Println("notification service started...")
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		err := ctrller.ListenEmailRegisterConfirm()
-		wg.Done()
-		if err != nil {
-			panic(err)
-		}
-	}()
-
-	wg.Wait()
+	<-ctx.Done()
+	consumer.Stop()
+	log.Println("notification service stopped...")
 }

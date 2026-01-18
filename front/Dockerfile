@@ -1,13 +1,23 @@
-FROM node:20-alpine
+FROM node:20-alpine AS build 
+WORKDIR /app 
 
-WORKDIR /app
+# Установка зависимостей 
+COPY package.json yarn.lock ./ 
+RUN yarn install --frozen-lockfile 
+COPY . . 
+RUN yarn build 
 
-COPY package.json yarn.lock ./
-RUN yarn install
+FROM nginx:alpine 
+WORKDIR /usr/share/nginx/html 
 
-COPY . .
-RUN yarn build
+# Удаление дефолтной страницы nginx 
+RUN rm -rf ./* 
 
-RUN yarn global add serve
 
-CMD ["serve" "-s" "dist"]
+COPY --from=build /app/dist ./
+COPY nginx.conf /etc/nginx/conf.d/default.conf 
+COPY entrypoint.sh /entrypoint.sh 
+RUN chmod +x /entrypoint.sh 
+
+EXPOSE 80 443
+CMD ["/entrypoint.sh"]

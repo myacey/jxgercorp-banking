@@ -1,16 +1,27 @@
+input {
+    border: none;
+    background-image: none;
+    background-color: transparent;
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
 
-/* Стили для полей ввода */
-.input-field {
-    width: 100%;
-    padding: 10px;
-    border: 2px solid #dcdcdc;
-    border-radius: 5px;
-    font-size: 16px;
-    box-sizing: border-box;
-    transition: border-color 0.3s ease;
+    color: white;
 }
 
-.input-field:focus {
-    border-color: #3498db; /* Цвет рамки при фокусе */
+input:focus {
     outline: none;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    /* display: none; <- Crashes Chrome on hover */
+    -webkit-appearance: none;
+    margin: 0;
+    /* <-- Apparently some margin are still there even though it's hidden */
+}
+
+input[type=number] {
+    appearance: textfield;
+    /* Firefox */
 }

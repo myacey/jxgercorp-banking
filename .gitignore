@@ -1,4 +1,4 @@
-.env
+.env.private
 
 .vscode
 
@@ -9,4 +9,4 @@
 /package-lock.json
 /node_modules/
 
-/services/db/data/
+/services/kafka-data/

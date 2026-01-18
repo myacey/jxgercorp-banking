@@ -10,6 +10,10 @@
   </a>
 </p>
 
+![app-architecture](https://github.com/user-attachments/assets/fa19ff84-b898-4274-a752-ed31eb87738c)
+
+
+
 ## Описание
 JXGERcorp Banking предоставляет пользователям следующие возможности:
 1. **Регистрация и подтверждение учетной записи**  
@@ -91,8 +95,8 @@ JXGERcorp Banking предоставляет пользователям след
         }
         ```
 
-### API Transaction
-- **POST** `api/v1/transaction/create`:
+### API Transfer
+- **POST** `api/v1/transfer/create`:
     - Создает транзакцию (перевод денег между пользователями).
     - Тело запроса:
         ```json
@@ -113,7 +117,7 @@ JXGERcorp Banking предоставляет пользователям след
         }
         ```
 
-- **GET** `api/v1/transaction/search`:
+- **GET** `api/v1/transfer/search`:
     - Получает историю транзакций с поддержкой постраничного просмотра.
     - Тело запроса:
         ```json
@@ -163,7 +167,7 @@ JXGERcorp Banking предоставляет пользователям след
 - **services/** — микросервисы на Go:
     - api-gateway — точка входа в систему, проксирует запросы, обрабатывает авторизацию и трассировку.
     - user — управление пользователями (регистрация, авторизация, получение баланса и подтверждение email).
-    - transaction — обработка переводов и истории транзакций.
+    - transfer — обработка переводов и истории транзакций.
     - token — управление токенами и аутентификацией (gRPC).
     - notification — сервис отправки email уведомлений, взаимодействующий через Kafka.
     - db — скрипты миграций, sqlc-код и другие файлы, связанные с базой данных.
@@ -222,7 +226,7 @@ npm run serve
 ```sh
 go run services/api-gateway/cmd/main.go
 go run services/user/cmd/main.go
-go run services/transaction/cmd/main.go
+go run services/transfer/cmd/main.go
 go run services/token/cmd/main.go
 go run services/notification/cmd/main.go
 ```
@@ -230,8 +234,8 @@ go run services/notification/cmd/main.go
 ## Дополнительные задачи (в процессе разработки)
 - [ ] Реализация **Refresh Tokens** и **API Tokens**.
 - [ ] Интеграция **Prometheus** и **Grafana** для метрик и алертов.
-- [ ] Развертывание в **Kubernetes** и облачных платформах (например, **Yandex Cloud** или **AWS S3**).
-- [ ] Автодеплой через **GitHub Actions**.
+- [ ] Развертывание в **Kubernetes** и облачных платформах (например, **Yandex Cloud** или **AWS**).
+- [X] Автодеплой через **GitHub Actions**.
 
 ## Заключение
 **JXGERcorp Banking** — это современное решение для транзакционного банкинга, построенное на микросервисной архитектуре с использованием *Go* и *Vue*. Проект включает полноценную поддержку авторизации, распределенную трассировку с *Jaeger*, обмен сообщениями через *Kafka* и масштабируемую инфраструктуру с *Docker*.
