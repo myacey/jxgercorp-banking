@@ -235,7 +235,7 @@ export default {
 <style scoped>
 .homepage {
   min-height: 100vh;
-  background-color: rgba(40, 40, 40, 1);
+  background-color: var(--color-bg);
   display: flex;
   flex-direction: column;
 }

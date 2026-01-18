@@ -6,17 +6,17 @@
             <span class="currency-text">currency:</span>
 
             <div class="currency-list">
-                <div v-for="currency in currencies" :key="currency.code" class="currency btn"
+                <button v-for="currency in currencies" :key="currency.code" class="currency btn"
                     :class="{ selected: currency.code == selectedCurrencyCode }"
                     @click="selectedCurrencyCode = currency.code">
                     <span class="small-text currency-code-text">{{ currency.code }}</span>
-                </div>
+                </button>
             </div>
         </div>
 
         <div class="nav-btns">
-            <h3 class="cancel-btn btn" @click="$emit('cancel')"> cancel </h3>
-            <h3 class="create-btn btn" @click="createAccount">create</h3>
+            <button class="secondary-btn" @click="$emit('cancel')"> cancel </button>
+            <button class="primary-btn" @click="createAccount">create</button>
         </div>
     </div>
 </template>

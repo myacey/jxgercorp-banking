@@ -61,7 +61,7 @@ export default {
 }
 
 .amount.negative {
-  color: #a83232;
+  color: var(--color-accent);
 }
 
 .transaction-details {

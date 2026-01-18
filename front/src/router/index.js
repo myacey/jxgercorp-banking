@@ -5,11 +5,26 @@ import VueRouter from "vue-router";
 Vue.use(VueRouter);
 
 const routes = [
-  { path: "/login", component: () => import("@/views/LoginView.vue") },
-  { path: "/register", component: () => import("@/views/RegisterView.vue") },
-  { path: "/main", component: () => import("@/views/pages/Homepage.vue") },
-  { path: "/user/confirm", component: () => import("@/views/ConfirmView.vue") },
-  { path: "/", redirect: "/main" }, // При заходе на '/' идём на '/main'
+  {
+    path: "/login",
+    component: () => import("@/views/pages/Login.vue"),
+  },
+  {
+    path: "/register",
+    component: () => import("@/views/pages/Register.vue"),
+  },
+  {
+    path: "/main",
+    component: () => import("@/views/pages/Homepage.vue"),
+  },
+  {
+    path: "/user/confirm",
+    component: () => import("@/views/pages/Confirm.vue"),
+  },
+  {
+    path: "/",
+    redirect: "/main",
+  }, // При заходе на '/' идём на '/main'
 ];
 
 // const router = new VueRouter({

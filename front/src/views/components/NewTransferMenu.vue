@@ -47,8 +47,8 @@
         </span>
 
         <div class="btns">
-            <h3 class="cancel-btn btn" @click="$emit('cancel')"> cancel </h3>
-            <h3 class="create-btn btn" @click="$emit('confirm', transfer)"> create </h3>
+            <button class="cancel-btn btn h3" @click="$emit('cancel')"> cancel </button>
+            <button class="create-btn btn h3" @click="$emit('confirm', transfer)"> create </button>
         </div>
     </div>
 </template>

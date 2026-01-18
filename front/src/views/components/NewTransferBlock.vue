@@ -1,10 +1,8 @@
 <template>
   <div class="transfer-block">
-    <div class="action-buttons">
-      <div class="new-transfer-btn btn" @click="$emit('new-transfer')">new transfer</div>
-    </div>
-    <div class="balance-amount">{{ formattedBalance }}</div>
-    <div class="account-name">{{ username }}</div>
+    <button class="new-transfer-btn btn h3" @click="$emit('new-transfer')">new transfer</button>
+    <h2 class="balance-amount">{{ formattedBalance }}</h2>
+    <p class="base-text account-name">{{ username }}</p>
   </div>
 </template>
 
@@ -62,36 +60,31 @@ export default {
   justify-content: center;
   width: 130px;
   margin: auto 0;
-  font: 400 18px EB Garamond, -apple-system, Roboto, Helvetica, sans-serif;
-}
-
-.action-buttons {
-  align-self: center;
-  max-width: 100%;
-  width: 130px;
-  color: var(--Secondary-Color, #f3f3f3);
+  gap: 1px;
 }
 
 .new-transfer-btn {
   border-radius: 15px;
   display: flex;
+  flex: 1;
+  align-self: stretch;
   flex-direction: column;
   align-items: stretch;
   justify-content: center;
-  background-color: var(--Primary-Color, #a83232);
+  background-color: var(--color-accent);
   padding: 4px 13px;
 
-  color: var(--Secondary-Color, #f3f3f3);
+  color: white;
 }
 
 
 .balance-amount {
-  color: #fff;
+  color: white;
   font-size: 24px;
   font-weight: 700;
 }
 
 .account-name {
-  color: #a83232;
+  color: var(--color-accent);
 }
 </style>

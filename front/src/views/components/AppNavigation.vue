@@ -38,6 +38,8 @@ export default {
   gap: 40px 100px;
   justify-content: space-between;
   flex-wrap: wrap;
+
+  padding: 3px;
 }
 
 @media (max-width: 991px) {
