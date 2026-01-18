@@ -4,9 +4,11 @@ set -e
 echo "🚀 Starting deployment..."
 
 # Загружаем переменные
-if [ -f.env.private ]; then
+if [ -f .env.private ]; then
     echo "🔒 Loading local .env.private"
     source .env.private
+else
+    echo "ℹ️  .env.private not found, using environment variables"
 fi
 
 : "${SERVER_HOST:?SERVER_HOST not set}"
