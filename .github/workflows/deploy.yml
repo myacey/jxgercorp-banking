@@ -21,6 +21,9 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Create empty .env.private
+        run: touch .env.private
+
       - name: Run deploy script
         env:
           SERVER_HOST:        ${{ secrets.SERVER_HOST }}
