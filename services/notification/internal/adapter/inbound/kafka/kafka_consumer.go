@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"time"
 
 	"github.com/myacey/jxgercorp-banking/services/notification/internal/application/port/in"
 	"github.com/myacey/jxgercorp-banking/services/notification/internal/domain"
@@ -38,26 +39,42 @@ func NewConsumer(cfg Config, handler in.NotificationUseCaese) *Consumer {
 func (c *Consumer) Start(ctx context.Context) {
 	go func() {
 		for {
-			m, err := c.reader.ReadMessage(ctx)
+			select {
+			case <-ctx.Done():
+				log.Println("consumer context canceled, stopping")
+				return
+			default:
+			}
+
 			ctx, span := c.tracer.Start(ctx, "adapter: ProceedKafkaMsg")
 
+			m, err := c.reader.ReadMessage(ctx)
 			if err != nil {
-				log.Printf("ERROR: kafka read: %v", err)
-				span.End()
+			}
+
+			if err != nil {
+				if err == context.Canceled {
+					log.Println("consumer stopped by context")
+					return
+				}
+
+				log.Printf("kafka read error: %v", err)
+				time.Sleep(time.Second) // backoff
 				continue
 			}
 
 			var n domain.Notification
 			if err := json.Unmarshal(m.Value, &n); err != nil {
-				log.Printf("ERROR: Invalid message: %v", err)
+				log.Printf("invalid message: %v", err)
 				span.End()
 				continue
 			}
 			log.Printf("got message: %v", n.Subject)
 			log.Printf("message data: %v", n)
 			if err := c.handler.Handle(ctx, n); err != nil {
-				log.Printf("ERROR: Handler error: %v", err)
+				log.Printf("handler error: %v", err)
 			}
+
 			span.End()
 		}
 	}()

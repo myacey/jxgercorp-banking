@@ -120,17 +120,17 @@ services:
     image: apache/kafka-native
     container_name: kafka
     ports:
-      - "9093:9093"
+      - "9092:9092"
     environment:
       # Listeners
-      KAFKA_LISTENERS: CONTROLLER://kafka:9093,HOST://0.0.0.0:9093,DOCKER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: HOST://kafka:9093,DOCKER://kafka:9093
+      KAFKA_LISTENERS: CONTROLLER://kafka:9091,HOST://0.0.0.0:9092,DOCKER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: HOST://kafka:9092,DOCKER://kafka:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,HOST:PLAINTEXT,DOCKER:PLAINTEXT
       # KRaft
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9091
 
       # Broker-to-broker
       KAFKA_INTER_BROKER_LISTENER_NAME: DOCKER
@@ -143,6 +143,7 @@ services:
       - jxgercorp-net
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
 
   # OTEL-COLLECTOR
   otel-collector:
@@ -183,7 +184,7 @@ services:
     volumes:
       - ./services/monitoring/prometheus/:/etc/prometheus
     ports:
-      - "9095:9095"
+      - "9095:9090"
     networks:
       - jxgercorp-net
 
