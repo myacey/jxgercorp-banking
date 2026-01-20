@@ -44,7 +44,7 @@ tar czf deploy.tar.gz \
     services/monitoring/grafana
 
 echo "📂 Sending archive to server..."
-scp deploy.tar.gz "${SERVER_USER}@${SERVER_HOST}:${DEPLOY_DIR}/"
+scp -o StrictHostKeyChecking=no deploy.tar.gz "${SERVER_USER}@${SERVER_HOST}:${DEPLOY_DIR}/"
 rm deploy.tar.gz
 
 # Выполняем деплой по ssh
