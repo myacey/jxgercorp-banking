@@ -24,6 +24,11 @@ jobs:
       - name: Create empty .env.private
         run: touch .env.private
 
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.1
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
       - name: Run deploy script
         env:
           SERVER_HOST:        ${{ secrets.SERVER_HOST }}
