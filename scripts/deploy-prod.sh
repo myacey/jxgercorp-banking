@@ -21,6 +21,12 @@ fi
 echo "🔐 Logging into DockerHub..."
 echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
+# Создаём временный .env.private для сборки
+if [ ! -f .env.private ]; then
+    touch .env.private
+    TEMP_ENV=true
+fi
+
 # Сборка сервисов за исключение frontend (frontend с HMS билдится докер-флагом --profiles dev)
 echo "📦 Building services..."
 docker compose -f docker-compose.yml build
@@ -32,6 +38,11 @@ docker compose -f docker-compose.prod.yml build frontend
 # Пушим образы в docker hub
 echo "⬆️ Pushing images..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml push
+
+# Удаляем временный файл только если он был создан CI
+if [ "$TEMP_ENV" = true ]; then
+    rm .env.private
+fi
 
 # Отправляем конфиги на сервер
 echo "📦 Packaging configs..."
