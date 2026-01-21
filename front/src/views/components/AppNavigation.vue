@@ -1,33 +1,38 @@
 <template>
   <nav class="navigation">
-    <div class="logo">
-      <div class="logo-text">
-        <h1 class="brand-name">jxger corp</h1>
-      </div>
+    <div class="navigation__brand">
+      <h1 class="navigation__brand-name brand-name">jxger corp</h1>
     </div>
 
-    <div class="menu">
+    <div class="navigation__menu">
       <a href="#" class="nav-link">home</a>
       <a href="#" class="nav-link">features</a>
       <a href="#" class="nav-link">about us</a>
       <a href="#" class="nav-link">contact</a>
 
-      <span class="seoarator">|</span>
-      <div class="avatar-container">
-        <div class="avatar-container">
-          <img
-            src="https://api.builder.io/api/v1/image/assets/TEMP/4724a1e08316ed1696b11e825015f45acbfa5730?placeholderIfAbsent=true&apiKey=2273adaceecb4f3fb0db700e4dc8777b"
-            alt="User avatar" class="avatar-image" />
-          <div class="avatar-border"></div>
-        </div>
+      <span class="navigation__separator">|</span>
+      <div class="navigation__user">
+        <div class="avatar-container__icon icon-mask" :style="{ maskImage: `url(${userSVG})` }" />
+        <h3 class="navigation__username">{{ username ? username : 'username' }}</h3>
       </div>
     </div>
   </nav>
 </template>
 
 <script>
+import { getUsernameFromToken } from '@/utils/auth';
+
 export default {
-  name: 'AppNavigation'
+  name: 'AppNavigation',
+  data() {
+    return {
+      username: '',
+      userSVG: require('@/assets/user.svg'),
+    }
+  },
+  mounted() {
+    this.username = getUsernameFromToken();
+  }
 }
 </script>
 
@@ -38,35 +43,21 @@ export default {
   gap: 40px 100px;
   justify-content: space-between;
   flex-wrap: wrap;
-
-  padding: 3px;
 }
 
-@media (max-width: 991px) {
-  .navigation {
-    max-width: 100%;
-  }
-}
-
-.logo {
+.navigation__brand {
   align-self: stretch;
   display: flex;
   min-height: 35px;
   flex-direction: column;
   overflow: hidden;
   align-items: center;
-  color: rgba(243, 243, 243, 1);
+  color: white;
   text-align: center;
   justify-content: center;
   margin: auto 0;
   padding: 3px 10px;
   font: 400 40px Runic AltNo, -apple-system, Roboto, Helvetica, sans-serif;
-}
-
-.logo-text {
-  max-width: 100%;
-  width: 125px;
-  padding: 0 4px;
 }
 
 .brand-name {
@@ -77,7 +68,7 @@ export default {
   font-family: inherit;
 }
 
-.menu {
+.navigation__menu {
   align-self: stretch;
   display: flex;
   min-width: 240px;
@@ -101,7 +92,7 @@ export default {
   opacity: 0.8;
 }
 
-.separator {
+.navigation__separator {
   color: #f3f3f3;
   text-align: center;
   align-self: stretch;
@@ -109,45 +100,32 @@ export default {
   font: 400 18px EB Garamond, -apple-system, Roboto, Helvetica, sans-serif;
 }
 
-.user-avatar {
-  border-radius: 25px;
-  align-self: stretch;
-  display: flex;
-  min-height: 29px;
+.navigation__user {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  width: 125px;
-  margin: auto 0;
-  padding: 1px 5px;
+  gap: 15px;
+
+  border: 1px solid var(--color-text-muted);
+  border-radius: 15px;
+  padding: 2px 6px;
+
 }
 
-.avatar-container {
-  display: flex;
-  flex-direction: column;
-  border-radius: 0px 0px 0px 0px;
-  align-self: stretch;
-  position: relative;
-  aspect-ratio: 4.259;
-  width: 115px;
-  margin: auto 0;
+.navigation__username {
+  color: var(--color-accent);
 }
 
-.avatar-image {
-  position: absolute;
-  inset: 0;
-  height: 100%;
-  width: 100%;
-  object-fit: cover;
-  object-position: center;
-}
+.icon-mask {
+  width: 17px;
+  height: 17px;
+  background-color: var(--color-accent);
 
-.avatar-border {
-  position: relative;
-  border-radius: 17px;
-  z-index: 10;
-  display: flex;
-  flex-shrink: 0;
-  height: 29px;
-  border: 1px solid rgba(243, 243, 243, 1);
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
 }
 </style>

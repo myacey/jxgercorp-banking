@@ -8,28 +8,28 @@ const routes = [
   {
     path: "/login",
     component: () => import("@/views/pages/Login.vue"),
+    meta: { title: "login" },
   },
   {
     path: "/register",
     component: () => import("@/views/pages/Register.vue"),
+    meta: { title: "register" },
   },
   {
     path: "/main",
     component: () => import("@/views/pages/Homepage.vue"),
+    meta: { title: "home" },
   },
   {
     path: "/user/confirm",
     component: () => import("@/views/pages/Confirm.vue"),
+    meta: { title: "confirm" },
   },
   {
     path: "/",
     redirect: "/main",
   }, // При заходе на '/' идём на '/main'
 ];
-
-// const router = new VueRouter({
-//   routes
-// });
 
 const router = new VueRouter({
   mode: "history",
@@ -59,6 +59,9 @@ router.beforeEach((to, from, next) => {
 
   // если всё ок — просто продолжаем
   next();
+});
+router.afterEach((to) => {
+  document.title = to.meta.title || "JxgerCorp";
 });
 
 export default router;
