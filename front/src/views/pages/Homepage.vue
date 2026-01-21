@@ -238,27 +238,23 @@ export default {
   background-color: var(--color-bg);
   display: flex;
   flex-direction: column;
+  flex: 1;
 }
 
 .divider {
   display: flex;
-  margin-top: 10px;
-  width: 100%;
+  margin-top: 2px;
   flex-direction: column;
   overflow: hidden;
   align-items: stretch;
   justify-content: center;
+  padding: 0px 10px;
 }
 
-@media (max-width: 991px) {
-  .divider {
-    max-width: 100%;
-  }
-}
 
 .divider-line {
   border-radius: 5px;
-  background-color: rgba(217, 217, 217, 1);
+  background-color: var(--color-text-muted);
   display: flex;
   min-height: 1px;
   width: 100%;
