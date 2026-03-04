@@ -43,10 +43,12 @@
 
     <!-- new transfer -->
     <div v-if="showNewTransferMenu" class="overlay"
-      @click.self="showNewTransferMenu = false; accountsToTransfer = null">
-      <NewTransferMenu :accounts=accountsToTransfer :errorText=errorOnCreateTransfer
-        @request-search-accounts="searchAccountsOfUsername"
-        @cancel="showNewTransferMenu = false; accountsToTransfer = null" @confirm="onCreateTransfer" />
+      @click.self="showNewTransferMenu = false; accountsToTransfer = null; usernameSuggestions = []">
+      <NewTransferMenu :usernameSuggestions=usernameSuggestions :accounts=accountsToTransfer
+        :errorText=errorOnCreateTransfer @request-search-accounts="searchAccountsOfUsername"
+        @cancel="showNewTransferMenu = false; accountsToTransfer = null; usernameSuggestions = []"
+        @confirm="onCreateTransfer" @request-username-suggestion="searchUsernameSuggestions"
+        @clear-suggested-usernames="clearSuggestedUsernames" />
     </div>
 
   </div>
@@ -58,7 +60,7 @@ import TransactionHistory from '../components/TransactionHistory.vue'
 import NewTransferBlock from '../components/NewTransferBlock.vue'
 import AccountDropdown from '../components/AccountDropdown.vue';
 import AccountSelector from '../components/AccountSelector.vue';
-import { createAccount, createTransfer, deleteAccount, fetchAccounts, fetchTransfers } from '@/api/api';
+import { createAccount, createTransfer, deleteAccount, fetchAccounts, fetchTransfers, fetchUsernameSuggestions } from '@/api/api';
 import { getUsernameFromToken } from '@/utils/auth';
 import DeleteAccountModal from '../components/DeleteAccountModal.vue';
 import NewTransferMenu from '../components/NewTransferMenu.vue';
@@ -89,8 +91,11 @@ export default {
       // ------------ ПЕРЕВОДЫ ------------
       transactions: [],
 
+
       // ------ создание нового перевода ------
       showNewTransferMenu: false,
+      usernameSuggestions: [],
+      usernameSearchTimeout: null,
       // список аккаунтов искомого пользователя, на который можно перевести деньги
       accountsToTransfer: [],
       errorOnCreateTransfer: "",
@@ -112,6 +117,31 @@ export default {
   },
 
   methods: {
+    // ------------ ПОЛЬЗОВАТЕЛИ ------------
+    async searchUsernameSuggestions(username) {
+      if (!username || username.length < 3) {
+        this.usernameSuggestions = []
+        return
+      }
+      console.log("DOING SMT")
+      const params = {
+        username: username,
+      }
+
+      clearTimeout(this.usernameSearchTimeout)
+
+      this.usernameSearchTimeout = setTimeout(async () => {
+        try {
+          const usernames = await fetchUsernameSuggestions(params);
+          this.usernameSuggestions = usernames;
+        } catch (error) {
+          console.error("failed to suggest username")
+        }
+      }, 300)
+    },
+    async clearSuggestedUsernames() {
+      this.usernameSuggestions = []
+    },
     // ------------ АККАУНТЫ ------------
     async loadAccounts() {
       try {

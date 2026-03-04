@@ -6,7 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel/metric"
 
+	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
 	"github.com/myacey/jxgercorp-banking/services/libs/web"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/config"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/httpserver/handler"
@@ -31,9 +33,10 @@ func New(
 	queries *db.Queries,
 	store *redis.Client,
 	grpcClient *grpcclient.ClientImpl,
+	meter metric.Meter,
 ) (*App, error) {
 	app := &App{}
-	err := app.initialize(cfg, conn, queries, store, grpcClient)
+	err := app.initialize(cfg, queries, store, grpcClient, meter)
 	app.server = web.NewServer(cfg.HTTPServerCfg, app.router)
 	if err != nil {
 		return nil, err
@@ -52,12 +55,12 @@ func (app *App) Stop(ctx context.Context) error {
 
 func (app *App) initialize(
 	cfg config.AppConfig,
-	conn *sql.DB,
 	queries *db.Queries,
 	store *redis.Client,
 	grpcClient *grpcclient.ClientImpl,
+	meter metric.Meter,
 ) error {
-	usrRepo := userrepo.NewUserRepo(queries)
+	usrRepo := userrepo.NewUserRepo(queries, &cfg.RepositoryCfg)
 	confirmRepo := confirmationrepo.NewConfirmationCodesRepo(store)
 
 	kafkaProducer := kafka.NewProducer(cfg.KafkaCfg)
@@ -65,18 +68,20 @@ func (app *App) initialize(
 	confirmSrv := service.NewConfirmationService(confirmRepo, kafkaProducer, cfg.ConfirmationCfg)
 	hasherSrv := hasher.NewBcrypt()
 	app.service = &service.Service{
-		User: *service.NewUserSrv(usrRepo, *confirmSrv, grpcClient, hasherSrv),
+		User: *service.NewUserSrv(usrRepo, *confirmSrv, grpcClient, hasherSrv, telemetry.NewUserMetrics(meter)),
 	}
 
-	handlr := handler.NewHandler(&app.service.User, cfg.HandlerCfg)
+	handlr := handler.NewHandler(&app.service.User, cfg.HandlerCfg, *telemetry.NewHTTPMetrics(meter))
 
 	app.router = gin.Default()
 	app.router.ContextWithFallback = true
 	app.router.Use(handlr.TracingMiddleware())
+	app.router.Use(handlr.MetricsMiddleware())
 
 	app.router.POST("/api/v1/user/register", handlr.CreateUser)
 	app.router.POST("/api/v1/user/login", handlr.Login)
 	app.router.GET("/api/v1/user/confirm", handlr.ConfirmUserEmail)
+	app.router.GET("/api/v1/user/search", handlr.SearchUsersByUsernameSimilarity)
 
 	return nil
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/myacey/jxgercorp-banking/services/libs/apperror"
+	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/models/dto/request"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/models/dto/response"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/models/entity"
@@ -33,18 +34,19 @@ type UserService interface {
 	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
 	Login(ctx context.Context, req *request.Login) (string, error)
 	UpdateUserInfo(ctx context.Context, req *request.UpdateUserInfo, username string) (*entity.User, error)
+	SearchUsersByUsernameSimilarity(ctx context.Context, searchUsername string) ([]string, error)
 }
 
 type Handler struct {
+	cfg Config
+
 	userSrv UserService
 
-	tracer trace.Tracer
-	// metrics telemetry.UserMetrics
-
-	cfg Config
+	tracer  trace.Tracer
+	metrics *telemetry.HTTPMetrics
 }
 
-func NewHandler(userSrv UserService, cfg Config) *Handler {
+func NewHandler(userSrv UserService, cfg Config, metrics telemetry.HTTPMetrics) *Handler {
 	return &Handler{
 		userSrv: userSrv,
 		tracer:  otel.Tracer("handler"),

@@ -57,30 +57,40 @@ func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientIm
 	app.router.Use(handl.MetricsMiddleware())
 	app.router.Use(handl.TracingMiddleware())
 
-	public := app.router.Group("/api/v1/user")
+	publicUser := app.router.Group("/api/v1/user")
 	{
-		public.Match(
+		publicUser.Match(
 			[]string{http.MethodOptions, http.MethodPost},
 			"/register",
 			handl.ProxyHandler(cfg.Services["user-service"]),
 		)
-		public.Match(
+		publicUser.Match(
 			[]string{http.MethodOptions, http.MethodPost},
 			"/login",
 			handl.ProxyHandler(cfg.Services["user-service"]),
 		)
-		public.Match(
+		publicUser.Match(
 			[]string{http.MethodOptions, http.MethodGet},
 			"/confirm",
 			handl.ProxyHandler(cfg.Services["user-service"]),
 		)
 	}
 
-	protected := app.router.Group("/api/v1/transfer")
-	protected.Use(handl.AuthTokenMiddleware())
+	protectedUser := app.router.Group("/api/v1/user")
+	protectedUser.Use(handl.AuthTokenMiddleware())
+	{
+		protectedUser.Match(
+			[]string{http.MethodOptions, http.MethodGet},
+			"/search",
+			handl.ProxyHandler(cfg.Services["user-service"]),
+		)
+	}
+
+	protectedTransfer := app.router.Group("/api/v1/transfer")
+	protectedTransfer.Use(handl.AuthTokenMiddleware())
 	{
 		// GET - SearchAccounts (list accounts of some user)
-		protected.Match(
+		protectedTransfer.Match(
 			[]string{http.MethodOptions, http.MethodGet},
 			"/accounts",
 			handl.ProxyHandler(cfg.Services["transfer-service"]),
@@ -88,7 +98,7 @@ func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientIm
 
 		// POST - CreateAccount (for person with some currency, RUB/EUR/USD/...)
 		// DELETE - DeleteAccount (delete account with specified ID)
-		protected.Match(
+		protectedTransfer.Match(
 			[]string{http.MethodOptions, http.MethodPost, http.MethodDelete},
 			"/account",
 			handl.ProxyHandler(cfg.Services["transfer-service"]),
@@ -96,14 +106,14 @@ func (app *App) initialize(cfg config.AppConfig, grpcClient *grpcclient.ClientIm
 
 		// POST - CreateTransfer (move money from one account to other)
 		// GET - SearchTransfersWithAccount (list with offset and limit all transfer from/to account)
-		protected.Match(
+		protectedTransfer.Match(
 			[]string{http.MethodOptions, http.MethodGet, http.MethodPost},
 			"",
 			handl.ProxyHandler(cfg.Services["transfer-service"]),
 		)
 
 		// GET - GetCurrencies(get list of available currencies)
-		protected.Match(
+		protectedTransfer.Match(
 			[]string{http.MethodOptions, http.MethodGet},
 			"/currencies",
 			handl.ProxyHandler(cfg.Services["transfer-service"]),

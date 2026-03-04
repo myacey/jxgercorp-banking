@@ -19,6 +19,10 @@ const (
 
 // CreateUser checks request's json and send req so service
 func (h *Handler) CreateUser(c *gin.Context) {
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller.Registers")
+	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
+
 	var req request.Register
 	if err := c.ShouldBindJSON(&req); err != nil {
 		wrapCtxWithError(c, apperror.NewBadReq("invalid req: "+err.Error()))
@@ -38,7 +42,7 @@ func (h *Handler) CreateUser(c *gin.Context) {
 
 // Login checks user data with existing in db and sends auth token
 func (h *Handler) Login(c *gin.Context) {
-	ctx, span := h.tracer.Start(c.Request.Context(), "controller: Login")
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller.Login")
 	defer span.End()
 	c.Request = c.Request.WithContext(ctx)
 
@@ -67,7 +71,7 @@ func (h *Handler) Login(c *gin.Context) {
 }
 
 func (h *Handler) ConfirmUserEmail(c *gin.Context) {
-	ctx, span := h.tracer.Start(c.Request.Context(), "controller: ConfirmUserEmail")
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller.ConfirmUserEmail")
 	defer span.End()
 	c.Request = c.Request.WithContext(ctx)
 
@@ -93,7 +97,7 @@ func (h *Handler) ConfirmUserEmail(c *gin.Context) {
 }
 
 func (h *Handler) GetUserByID(c *gin.Context) {
-	ctx, span := h.tracer.Start(c.Request.Context(), "controller: GetUserByID")
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller.GetUserByID")
 	defer span.End()
 	c.Request = c.Request.WithContext(ctx)
 
@@ -113,7 +117,7 @@ func (h *Handler) GetUserByID(c *gin.Context) {
 }
 
 func (h *Handler) GetUserByUsername(c *gin.Context) {
-	ctx, span := h.tracer.Start(c.Request.Context(), "controller: GetUserByUsername")
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller.GetUserByUsername")
 	defer span.End()
 	c.Request = c.Request.WithContext(ctx)
 
@@ -133,7 +137,7 @@ func (h *Handler) GetUserByUsername(c *gin.Context) {
 }
 
 func (h *Handler) DeleteUserByUsername(c *gin.Context) {
-	ctx, span := h.tracer.Start(c.Request.Context(), "controller: DeleteUserByUsername")
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller.DeleteUserByUsername")
 	defer span.End()
 	c.Request = c.Request.WithContext(ctx)
 
@@ -156,7 +160,7 @@ func (h *Handler) DeleteUserByUsername(c *gin.Context) {
 }
 
 func (h *Handler) UpdateUserInfo(c *gin.Context) {
-	ctx, span := h.tracer.Start(c.Request.Context(), "controller: UpdateUserInfo")
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller.UpdateUserInfo")
 	defer span.End()
 	c.Request = c.Request.WithContext(ctx)
 
@@ -175,4 +179,24 @@ func (h *Handler) UpdateUserInfo(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, usr)
+}
+
+func (h *Handler) SearchUsersByUsernameSimilarity(c *gin.Context) {
+	ctx, span := h.tracer.Start(c.Request.Context(), "controller.SearchUsersByUsernameSimilarity")
+	defer span.End()
+	c.Request = c.Request.WithContext(ctx)
+
+	searchUsername, ok := c.GetQuery(QueryUsername)
+	if !ok {
+		wrapCtxWithError(c, apperror.NewBadReq("invalid req: no username query key"))
+		return
+	}
+
+	usernames, err := h.userSrv.SearchUsersByUsernameSimilarity(ctx, searchUsername)
+	if err != nil {
+		wrapCtxWithError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, usernames)
 }

@@ -29,7 +29,7 @@ func main() {
 	}
 
 	// Telemetry
-	tracer, _, err := telemetry.StartTracer("token-microservice", "0.0.1")
+	tracer, _, err := telemetry.StartTelemetry("token-microservice", "0.0.1")
 	if err != nil {
 		log.Fatalf("failed to start tracer: %v", err)
 	}

@@ -15,8 +15,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-// StartTracer initialize tracer exporter
-func StartTracer(serviceName, serviceVersion string) (*trace.TracerProvider, *metric.MeterProvider, error) {
+// StartTelemetry initialize metrics and tracers exporter
+func StartTelemetry(serviceName, serviceVersion string) (*trace.TracerProvider, *metric.MeterProvider, error) {
 	headers := map[string]string{
 		"content-type": "application/json",
 	}

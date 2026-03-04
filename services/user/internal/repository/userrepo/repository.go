@@ -22,24 +22,27 @@ var (
 	ErrUserNotFound         = errors.New("user not found")
 )
 
+type Config struct {
+	SearchUsernamesThreshold float64 `mapstructure:"search_username_threshold"`
+}
+
 type PostgresUser struct {
 	store *db.Queries
+	cfg   *Config
 
 	tracer trace.Tracer
 }
 
-func NewUserRepo(queries *db.Queries) *PostgresUser {
+func NewUserRepo(queries *db.Queries, cfg *Config) *PostgresUser {
 	return &PostgresUser{
 		store:  queries,
 		tracer: otel.Tracer("repository-user"),
+		cfg:    cfg,
 	}
 }
 
 func (r *PostgresUser) CreateUser(ctx context.Context, req *request.Register) (*entity.User, error) {
-	ctx, span := r.tracer.Start(ctx, "repository: CreateUser")
-	span.SetAttributes(
-		attribute.String("db.operation", "CreateUser"),
-	)
+	ctx, span := r.tracer.Start(ctx, "repository.CreateUser")
 	defer span.End()
 
 	arg := db.CreateUserParams{
@@ -68,10 +71,7 @@ func (r *PostgresUser) CreateUser(ctx context.Context, req *request.Register) (*
 }
 
 func (r *PostgresUser) GetUserByID(ctx context.Context, req *request.GetUserByID) (*entity.User, error) {
-	ctx, span := r.tracer.Start(ctx, "repository: CreateUser")
-	span.SetAttributes(
-		attribute.String("db.operation", "GetUserByID"),
-	)
+	ctx, span := r.tracer.Start(ctx, "repository.CreateUser")
 	defer span.End()
 
 	start := time.Now()
@@ -98,10 +98,7 @@ func (r *PostgresUser) GetUserByID(ctx context.Context, req *request.GetUserByID
 }
 
 func (r *PostgresUser) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
-	ctx, span := r.tracer.Start(ctx, "repository: GetUserByUsername")
-	span.SetAttributes(
-		attribute.String("db.operation", "GetUserByUsername"),
-	)
+	ctx, span := r.tracer.Start(ctx, "repository.GetUserByUsername")
 	defer span.End()
 
 	start := time.Now()
@@ -128,10 +125,7 @@ func (r *PostgresUser) GetUserByUsername(ctx context.Context, username string) (
 }
 
 func (r *PostgresUser) DeleteUserByUsername(ctx context.Context, username string) error {
-	ctx, span := r.tracer.Start(ctx, "repository: DeleteUserByUsername")
-	span.SetAttributes(
-		attribute.String("db.operation", "DeleteUserByUsername"),
-	)
+	ctx, span := r.tracer.Start(ctx, "repository.DeleteUserByUsername")
 	defer span.End()
 
 	start := time.Now()
@@ -152,10 +146,7 @@ func (r *PostgresUser) DeleteUserByUsername(ctx context.Context, username string
 }
 
 func (r *PostgresUser) UpdateUserInfo(ctx context.Context, req *request.UpdateUserInfo, username string) (*entity.User, error) {
-	ctx, span := r.tracer.Start(ctx, "repository: UpdateUserInfo")
-	span.SetAttributes(
-		attribute.String("db.operation", "UpdateUserInfo"),
-	)
+	ctx, span := r.tracer.Start(ctx, "repository.UpdateUserInfo")
 	defer span.End()
 
 	arg := db.UpdateUserInfoParams{
@@ -187,10 +178,7 @@ func (r *PostgresUser) UpdateUserInfo(ctx context.Context, req *request.UpdateUs
 }
 
 func (r *PostgresUser) UpdateUserStatus(ctx context.Context, newStatus entity.UserStatus, username string) (*entity.User, error) {
-	ctx, span := r.tracer.Start(ctx, "repository: UpdateUserStatus")
-	span.SetAttributes(
-		attribute.String("db.operation", "UpdateUserStatus"),
-	)
+	ctx, span := r.tracer.Start(ctx, "repository.UpdateUserStatus")
 	defer span.End()
 
 	arg := db.UpdateUserStatusParams{
@@ -218,4 +206,29 @@ func (r *PostgresUser) UpdateUserStatus(ctx context.Context, newStatus entity.Us
 		CreatedAt:      dbUser.CreatedAt,
 		Status:         dbUser.Status,
 	}, nil
+}
+
+func (r *PostgresUser) SearchUsersByUsernameSimilarity(ctx context.Context, searchUsername string, limit int32) ([]string, error) {
+	ctx, span := r.tracer.Start(ctx, "repository.SearchUsersByUsernameSimilarity")
+	defer span.End()
+
+	arg := db.SearchUsersByUsernameSimilarityParams{
+		SearchUsername: searchUsername,
+		Threshold:      r.cfg.SearchUsernamesThreshold,
+		Limit:          limit,
+	}
+	start := time.Now()
+	usernames, err := r.store.SearchUsersByUsernameSimilarity(ctx, arg)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return []string{}, nil
+		default:
+			return nil, err
+		}
+	}
+	elapsed := time.Since(start)
+	span.SetAttributes(attribute.Float64("sql.time.ms", float64(elapsed.Milliseconds())))
+
+	return usernames, nil
 }

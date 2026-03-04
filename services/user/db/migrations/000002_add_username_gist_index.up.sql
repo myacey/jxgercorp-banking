@@ -1,0 +1,1 @@
+CREATE INDEX "trgm_username_idx" ON "users" USING gist ("username" gist_trgm_ops);

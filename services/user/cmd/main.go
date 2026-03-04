@@ -45,12 +45,12 @@ func main() {
 	}
 
 	// tracer for Telemetry (Jaeger)
-	_, _, err = telemetry.StartTracer("user-microservice", "0.0.1")
+	_, _, err = telemetry.StartTelemetry("user-microservice", "0.0.1")
 	if err != nil {
 		log.Fatal(err)
 	}
-	// _ = telemetry.NewMetricsFactory("user-microservice")
-	// userMetrics := metricsFactory.NewUserMetrics()
+	// prometheus metrics
+	metrics := telemetry.NewMeter("user-microservice")
 
 	// grpc client
 	grpcConn, err := grpcclient.MustInitConnection(cfg.GrpcConfig)
@@ -59,7 +59,7 @@ func main() {
 	}
 	defer grpcConn.Close()
 
-	app, err := httpserver.New(cfg, conn, psqlQueries, rdb, grpcclient.New(grpcConn))
+	app, err := httpserver.New(cfg, conn, psqlQueries, rdb, grpcclient.New(grpcConn), metrics)
 	if err != nil {
 		log.Fatal(err)
 	}

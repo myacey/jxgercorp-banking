@@ -34,3 +34,10 @@ RETURNING *;
 -- name: DeleteUserByUsername :exec
 DELETE FROM users
 WHERE username = $1;
+
+-- name: SearchUsersByUsernameSimilarity :many
+SELECT username
+FROM users
+WHERE public.similarity(username, sqlc.arg('search_username')::varchar) > sqlc.arg('threshold')::float
+ORDER BY public.similarity(username, sqlc.arg('search_username')) DESC
+LIMIT sqlc.arg('limit')::int;
