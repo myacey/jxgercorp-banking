@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"io"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -18,13 +21,6 @@ func (h *Handler) TracingMiddleware() gin.HandlerFunc {
 		ctx, span := h.tracer.Start(ctx, "user-service: "+fullpath, trace.WithSpanKind(trace.SpanKindServer))
 		defer span.End()
 
-		// start := time.Now()
-
-		// span.SetAttributes(
-		// 	attribute.String("http.method"),
-		// 	attribute.String("http.route", c.FullPath()),
-		// )
-
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 
@@ -37,13 +33,41 @@ func (h *Handler) TracingMiddleware() gin.HandlerFunc {
 		}
 		span.SetAttributes(attribues...)
 
-		// duration := time.Since(start)
-		// h.metrics.HTTPMetrics.RecordDuration(ctx, duration.Milliseconds(), attribues...)
-		// if !(200 <= c.Writer.Status() && c.Writer.Status() < 300) {
-		// 	h.metrics.HTTPMetrics.RecordError(ctx, attribues...)
-		// }
-
 		span.SetAttributes(attribute.Int("http.status_code", c.Writer.Status()))
-		// h.metrics.HTTPMetrics.RecordHit(ctx, attribues...)
+	}
+}
+
+func (h *Handler) MetricsMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+
+		ctx := c.Request.Context()
+
+		c.Next()
+
+		duration := time.Since(start)
+		status := c.Writer.Status()
+		method := c.Request.Method
+		route := c.FullPath()
+		if route == "" {
+			route = "unknown"
+		}
+
+		attrs := []attribute.KeyValue{
+			semconv.HTTPMethod(method),
+			semconv.HTTPRoute(route),
+			semconv.HTTPStatusCode(status),
+			semconv.ServiceName("user-service"),
+		}
+
+		h.metrics.RecordHit(ctx, attrs...)
+		h.metrics.RecordDuration(ctx, duration.Milliseconds(), attrs...)
+
+		if status >= 500 {
+			errData, _ := io.ReadAll(c.Request.Response.Body)
+			attrs = append(attrs, attribute.String("error", string(errData)))
+
+			h.metrics.RecordError(ctx, attrs...)
+		}
 	}
 }

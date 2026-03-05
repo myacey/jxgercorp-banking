@@ -10,6 +10,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/myacey/jxgercorp-banking/services/libs/apperror"
+	"github.com/myacey/jxgercorp-banking/services/libs/telemetry"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/models/dto/request"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/models/entity"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/hasher"
@@ -18,7 +19,10 @@ import (
 
 var ErrInvalidEmailOrPassword = errors.New("invalid email or password")
 
-const tokenTTL = time.Duration(24 * time.Hour)
+const (
+	tokenTTL                             = time.Duration(24 * time.Hour)
+	searchUsersByUsernameSimilarityLimit = 10
+)
 
 type UserRepo interface {
 	CreateUser(ctx context.Context, req *request.Register) (*entity.User, error)
@@ -27,6 +31,7 @@ type UserRepo interface {
 	GetUserByUsername(ctx context.Context, username string) (*entity.User, error)
 	UpdateUserInfo(ctx context.Context, req *request.UpdateUserInfo, username string) (*entity.User, error)
 	UpdateUserStatus(ctx context.Context, newStatus entity.UserStatus, username string) (*entity.User, error)
+	SearchUsersByUsernameSimilarity(ctx context.Context, searchUsername string, limit int32) ([]string, error)
 }
 
 type TokenService interface {
@@ -44,30 +49,36 @@ type User struct {
 
 	// confirmCodeSrv used as service to create and send confirm codes.
 	confirmCodeSrv Confirmation
-
 	// tokenSrv is used to create and user tokens for /login.
 	tokenSrv TokenService
-
 	// to hash password of user.
 	hasher Hasher
 
 	// tracer realize trace logics into service.
-	tracer trace.Tracer
+	tracer  trace.Tracer
+	metrics *telemetry.UserMetrics
 }
 
-func NewUserSrv(repo UserRepo, confirmCodeSrv Confirmation, tokenSrv TokenService, hasher Hasher) *User {
+func NewUserSrv(
+	repo UserRepo,
+	confirmCodeSrv Confirmation,
+	tokenSrv TokenService,
+	hasher Hasher,
+	metrics *telemetry.UserMetrics,
+) *User {
 	return &User{
 		repo:           repo,
 		confirmCodeSrv: confirmCodeSrv,
 		tokenSrv:       tokenSrv,
 		hasher:         hasher,
+		metrics:        metrics,
 
 		tracer: otel.Tracer("service-user"),
 	}
 }
 
 func (s *User) CreateUser(ctx context.Context, req *request.Register) (*entity.User, error) {
-	ctx, span := s.tracer.Start(ctx, "service: CreateUser")
+	ctx, span := s.tracer.Start(ctx, "service.CreateUser")
 	defer span.End()
 
 	start := time.Now()
@@ -100,11 +111,13 @@ func (s *User) CreateUser(ctx context.Context, req *request.Register) (*entity.U
 		return nil, err
 	}
 
+	s.metrics.RecordUserCreated(ctx)
+
 	return user, nil
 }
 
 func (s *User) Login(ctx context.Context, req *request.Login) (string, error) {
-	ctx, span := s.tracer.Start(ctx, "service: Login")
+	ctx, span := s.tracer.Start(ctx, "service.Login")
 	defer span.End()
 
 	usr, err := s.repo.GetUserByUsername(ctx, req.Username)
@@ -141,7 +154,7 @@ func (s *User) Login(ctx context.Context, req *request.Login) (string, error) {
 }
 
 func (s *User) ConfirmUserEmail(ctx context.Context, req *request.ConfirmUserEmail) (string, error) {
-	ctx, span := s.tracer.Start(ctx, "service: ConfirmUserEmail")
+	ctx, span := s.tracer.Start(ctx, "service.ConfirmUserEmail")
 	defer span.End()
 
 	err := s.confirmCodeSrv.checkConfirmCode(ctx, req.Username, req.Code)
@@ -158,7 +171,7 @@ func (s *User) ConfirmUserEmail(ctx context.Context, req *request.ConfirmUserEma
 }
 
 func (s *User) GetUserByID(ctx context.Context, req *request.GetUserByID) (*entity.User, error) {
-	ctx, span := s.tracer.Start(ctx, "service: GetUserByID")
+	ctx, span := s.tracer.Start(ctx, "service.GetUserByID")
 	defer span.End()
 
 	user, err := s.repo.GetUserByID(ctx, req)
@@ -175,7 +188,7 @@ func (s *User) GetUserByID(ctx context.Context, req *request.GetUserByID) (*enti
 }
 
 func (s *User) GetUserByUsername(ctx context.Context, username string) (*entity.User, error) {
-	ctx, span := s.tracer.Start(ctx, "service: GetUserByUsername")
+	ctx, span := s.tracer.Start(ctx, "service.GetUserByUsername")
 	defer span.End()
 
 	user, err := s.repo.GetUserByUsername(ctx, username)
@@ -192,7 +205,7 @@ func (s *User) GetUserByUsername(ctx context.Context, username string) (*entity.
 }
 
 func (s *User) DeleteUserByUsername(ctx context.Context, username string) error {
-	ctx, span := s.tracer.Start(ctx, "service: DeleteUserByUsername")
+	ctx, span := s.tracer.Start(ctx, "service.DeleteUserByUsername")
 	defer span.End()
 
 	err := s.repo.DeleteUserByUsername(ctx, username)
@@ -208,7 +221,7 @@ func (s *User) DeleteUserByUsername(ctx context.Context, username string) error 
 }
 
 func (s *User) UpdateUserInfo(ctx context.Context, req *request.UpdateUserInfo, username string) (*entity.User, error) {
-	ctx, span := s.tracer.Start(ctx, "service: UpdateUserInfo")
+	ctx, span := s.tracer.Start(ctx, "service.UpdateUserInfo")
 	defer span.End()
 
 	user, err := s.repo.UpdateUserInfo(ctx, req, username) // TODO: hash
@@ -222,4 +235,13 @@ func (s *User) UpdateUserInfo(ctx context.Context, req *request.UpdateUserInfo, 
 	}
 
 	return user, nil
+}
+
+func (s *User) SearchUsersByUsernameSimilarity(ctx context.Context, searchUsername string) ([]string, error) {
+	usernames, err := s.repo.SearchUsersByUsernameSimilarity(ctx, searchUsername, searchUsersByUsernameSimilarityLimit)
+	if err != nil {
+		return nil, apperror.NewInternal("failed to find users", err)
+	}
+
+	return usernames, nil
 }

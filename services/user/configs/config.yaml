@@ -33,3 +33,6 @@ confirmation:
 
 handler:
   app_domain: ${APP_DOMAIN}
+
+repository:
+  search_username_threshold: 0.2

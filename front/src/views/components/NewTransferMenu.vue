@@ -5,13 +5,19 @@
         <!-- Указание имени пользователя, кому делаем перевод -->
         <div class="username-input-block">
             <input class="username-input base-text" type="text" v-model="username" placeholder="username" />
+            <!-- dropdown -->
+            <div v-if="usernameSuggestions.length" class="suggestions-dropdown">
+                <div v-for="item in usernameSuggestions" :key="item" class="suggestion-item base-text"
+                    @click="selectUsernameSuggestions(item)">
+                    {{ item }}
+                </div>
+            </div>
+
             <div class="search-btn btn" :class="{ active: newSearchAvailable }"
-                @click.stop="$emit('request-search-accounts', username); lastSearchedUsername = username">
+                @click.stop="requestSearchAccountsOfUser(username)">
                 <div class="search-icon" :style="{ maskImage: `url(${searchSVG})` }"
                     :class="{ active: newSearchAvailable }" />
             </div>
-
-
         </div>
 
         <!-- Выбираем на какой конкретный аккаунт перевести -->
@@ -37,7 +43,6 @@
                     <input class="currency-input base-text" type="number" id="amount" placeholder="0.0"
                         v-model.number="amount" />
                 </label>
-
             </div>
         </label>
 
@@ -58,6 +63,11 @@ export default {
     name: 'NewTransferMenu',
 
     props: {
+        usernameSuggestions: {
+            type: Array,
+            default: () => [],
+            required: false,
+        },
         accounts: {
             type: Array,
             required: false,
@@ -72,6 +82,7 @@ export default {
         return {
             username: "",
             lastSearchedUsername: "",
+            __skipUsernameWatch: false,
 
             toAccountID: "",
             amount: null,
@@ -79,6 +90,16 @@ export default {
             searchSVG: require('@/assets/search.svg'),
             transferSVG: require('@/assets/transfer.svg'),
 
+        }
+    },
+
+    watch: {
+        username(val) {
+            if (this._skipUsernameWatch) {
+                this._skipUsernameWatch = false
+                return
+            }
+            this.$emit("request-username-suggestion", val)
         }
     },
 
@@ -103,6 +124,22 @@ export default {
                 amount: this.amount,
                 currency: this.accounts[0].currency,
             }
+        },
+    },
+
+    methods: {
+        requestSearchAccountsOfUser(username) {
+            this.lastSearchedUsername = username
+
+            this.$emit('request-search-accounts', username)
+        },
+        selectUsernameSuggestions(username) {
+            this._skipUsernameWatch = true
+            this.username = username
+
+            this.$emit('clear-suggested-usernames')
+
+            this.requestSearchAccountsOfUser(username)
         }
     }
 }
@@ -127,6 +164,8 @@ export default {
 }
 
 .username-input-block {
+    position: relative;
+
     display: flex;
     flex: 1;
     flex-direction: row;
@@ -170,6 +209,50 @@ export default {
 
 .username-input-block .search-icon.active {
     background-color: var(--color-bg);
+}
+
+.username-input-block .suggestions-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+
+    background: var(--color-bg);
+    border: 1px solid var(--color-bg-alt);
+    border-radius: 10px;
+
+    max-height: 180px;
+    overflow-y: auto;
+
+    z-index: 9999;
+}
+
+.username-input-block .suggestion-item {
+    padding: 6px 10px;
+    cursor: pointer;
+    color: var(--color-text-muted);
+}
+
+.username-input-block.suggestion-item:hover {
+    background-color: var(--color-bg-alt);
+}
+
+.suggestions-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.suggestions-dropdown::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.suggestions-dropdown::-webkit-scrollbar-thumb {
+    background: var(--color-text-muted);
+    border-radius: 10px;
+    border: 10px solid transparent;
+}
+
+.suggestions-dropdown::-webkit-scrollbar-button {
+    display: none;
 }
 
 .account-id-block {

@@ -35,7 +35,7 @@ export default {
     transition: transform 0.25s ease;
 
     font-size: 10px;
-    color: white;
+    color: var(--color-accent);
 }
 
 .arrow.open {

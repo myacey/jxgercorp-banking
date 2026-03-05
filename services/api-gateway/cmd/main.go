@@ -24,7 +24,7 @@ func main() {
 	defer stop()
 
 	// Telemetry
-	tracer, metricExporter, err := telemetry.StartTracer("api-gateway", "0.0.1")
+	tracer, metricExporter, err := telemetry.StartTelemetry("api-gateway", "0.0.1")
 	if err != nil {
 		log.Fatal(err)
 	}

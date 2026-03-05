@@ -14,6 +14,7 @@ import (
 	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/grpcclient"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/pkg/kafka"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/repository"
+	"github.com/myacey/jxgercorp-banking/services/user/internal/repository/userrepo"
 	"github.com/myacey/jxgercorp-banking/services/user/internal/service"
 )
 
@@ -27,6 +28,7 @@ type AppConfig struct {
 
 	ConfirmationCfg service.ConfirmationConfig `mapstructure:"confirmation"`
 	HandlerCfg      handler.Config             `mapstructure:"handler"`
+	RepositoryCfg   userrepo.Config            `mapstructure:"repository"`
 }
 
 func LoadConfig(cfgPath string) (config AppConfig, err error) {

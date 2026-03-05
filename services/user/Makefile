@@ -2,7 +2,7 @@
 
 help:
 	@echo "make sqlc			- generate sqlc files"
-	@echo "make new_migration <name>	- create new migration files (up and down)"
+	@echo "make new_migration name=<name>	- create new migration files (up and down)"
 
 sqlc:
 	sqlc generate -f ./db/sqlc.yaml

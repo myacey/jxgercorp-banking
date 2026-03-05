@@ -53,10 +53,28 @@ export const confirmUserEmail = async (confirmParams) => {
     const resp = await apiClient.get("v1/user/confirm", {
       params: confirmParams,
     });
-    console.log("confirm emial response:", resp);
+    console.log("confirm email response:", resp);
     return resp.data;
   } catch (error) {
     console.log("cant confirm account:", error);
+    throw (
+      error.response || {
+        data: { error: { message: "Unknown error occured" } },
+      }
+    );
+  }
+};
+
+export const fetchUsernameSuggestions = async (username) => {
+  try {
+    const resp = await apiClient.get("v1/user/search", {
+      params: username,
+      withCredentials: true,
+    });
+    console.log("searched usernames:", resp);
+    return resp.data;
+  } catch (error) {
+    console.log("cant suggest username:", error);
     throw (
       error.response || {
         data: { error: { message: "Unknown error occured" } },

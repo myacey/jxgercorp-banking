@@ -36,11 +36,10 @@ func main() {
 	defer psqlPool.Close()
 
 	// Tracer for Telemetry (Jaeger)
-	_, _, err = telemetry.StartTracer("transfer-microservice", "0.0.1")
+	_, _, err = telemetry.StartTelemetry("transfer-microservice", "0.0.1")
 	if err != nil {
 		log.Fatal(err)
 	}
-	_ = telemetry.NewMetricsFactory("transfer-microservice")
 
 	app, err := httpserver.New(cfg, psqlPool, psqlQueries)
 	if err != nil {

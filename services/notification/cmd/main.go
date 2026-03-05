@@ -30,7 +30,7 @@ func main() {
 	}
 
 	// tracer for Telemetry (Jaeger)
-	_, _, err = telemetry.StartTracer("notif-microservice", "0.0.1")
+	_, _, err = telemetry.StartTelemetry("notif-microservice", "0.0.1")
 	if err != nil {
 		log.Fatal(err)
 	}
