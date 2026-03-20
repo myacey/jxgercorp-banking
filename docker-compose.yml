@@ -2,7 +2,6 @@ services:
   # ==================================
   # ============= INFRA =============
   # =================================
-  # PSQL-USER
   postgres-user:
     image: postgres:17-alpine
     container_name: postgres-user
@@ -28,7 +27,6 @@ services:
       timeout: 10s
       retries: 5
 
-  # PSQL-TRANSFER
   postgres-transfer:
     image: postgres:17-alpine
     container_name: postgres-transfer
@@ -54,7 +52,6 @@ services:
       timeout: 10s
       retries: 5
 
-  # REDIS-USER
   redis-user:
     image: redis:alpine
     container_name: redis
@@ -82,7 +79,6 @@ services:
       postgres-user:
         condition: service_healthy
 
-  # MIGRATIONS
   migrate:
     build:
       context: .
@@ -115,7 +111,24 @@ services:
     networks:
       - jxgercorp-net
 
-  # KAFKA
+  mongodb:
+    image: mongo:8.0-noble
+    container_name: mongodb
+    restart: unless-stopped
+    ports:
+      - 27017:27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=secret
+    networks:
+      - jxgercorp-net
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
   kafka:
     image: apache/kafka-native
     container_name: kafka
@@ -145,7 +158,6 @@ services:
       - "host.docker.internal:host-gateway"
 
 
-  # OTEL-COLLECTOR
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     container_name: otel-collector
@@ -173,7 +185,6 @@ services:
     networks:
       - jxgercorp-net
 
-  # PROMETHEUS
   prometheus:
     image: prom/prometheus
     container_name: prometheus
@@ -188,7 +199,6 @@ services:
     networks:
       - jxgercorp-net
 
-  # GRAFANA
   grafana:
     image: grafana/grafana
     container_name: grafana
@@ -203,7 +213,6 @@ services:
     networks:
       - jxgercorp-net
     
-  # NODE-EXPORTER
   node-exporter:
     image: prom/node-exporter
     container_name: exporter
@@ -261,8 +270,6 @@ services:
     container_name: api-gateway
     expose:
       - "8080"
-    # volumes:
-      # - ../.env:/app/.env
     env_file:
       - .env
       - .env.docker
@@ -346,6 +353,25 @@ services:
       - .env.private
     networks:
       - jxgercorp-net
+
+  messanger-service:
+    build:
+      context: ./services
+      dockerfile: Dockerfile.shared
+      args:
+        SERVICE: messanger
+    image: myacey/messanger-service:latest
+    container_name: messanger-service
+    env_file:
+      - .env
+      - .env.docker
+      - .env.private
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - jxgercorp-net
+
 
 networks:
   jxgercorp-net:

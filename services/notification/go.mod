@@ -1,6 +1,6 @@
 module github.com/myacey/jxgercorp-banking/services/notification
 
-go 1.23.3
+go 1.25.0
 
 require (
 	github.com/go-viper/mapstructure/v2 v2.2.1

@@ -76,7 +76,7 @@ func (app *App) initialize(
 	app.router = gin.Default()
 	app.router.ContextWithFallback = true
 	app.router.Use(handlr.TracingMiddleware())
-	app.router.Use(handlr.MetricsMiddleware())
+	// app.router.Use(handlr.MetricsMiddleware())
 
 	app.router.POST("/api/v1/user/register", handlr.CreateUser)
 	app.router.POST("/api/v1/user/login", handlr.Login)
